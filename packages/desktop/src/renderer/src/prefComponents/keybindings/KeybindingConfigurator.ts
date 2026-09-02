@@ -35,7 +35,7 @@ export default class KeybindingConfigurator {
   constructor(
     defaultKeybindings: Map<string, string>,
     userKeybindings: Map<string, string>,
-    shortcutStyle: ShortcutStyle = 'marktext'
+    shortcutStyle: ShortcutStyle = 'typora'
   ) {
     this.defaultKeybindings = defaultKeybindings
     this.shortcutStyle = shortcutStyle

@@ -1,8 +1,10 @@
 import { getTranslation } from 'common/i18n'
 import { BrowserWindow } from 'electron'
 
-// Current language setting (can be obtained from config file or user settings)
-let currentLanguage = 'en'
+// Current language setting (can be obtained from config file or user settings).
+// The private build starts in Simplified Chinese; an explicit saved preference
+// still replaces this value during application initialization.
+let currentLanguage = 'zh-CN'
 
 /**
  * Gets the translated text.

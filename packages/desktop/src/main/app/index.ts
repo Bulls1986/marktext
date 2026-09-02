@@ -37,6 +37,8 @@ interface PathInfo {
   path: string
 }
 
+const DEFAULT_LANGUAGE = 'zh-CN'
+
 class App {
   private _accessor: Accessor
   private _args: CliArgs
@@ -152,68 +154,20 @@ class App {
     try {
       let currentLanguage = this._accessor.preferences.getItem<string>('language')
 
-      // If no language is set, auto-detect based on the system language
+      // Keep the private build's first-run language deterministic. Existing
+      // user preferences are still respected because this fallback is only
+      // used when the preference is missing or empty.
       if (!currentLanguage) {
-        const systemLanguage = app.getLocale()
-        log.info(`System language detected: ${systemLanguage}`)
-
-        // Supported language list (based on languages actually supported by the project)
-        const supportedLanguages = [
-          'en',
-          'zh-CN',
-          'zh-TW',
-          'ja',
-          'ko',
-          'fr',
-          'de',
-          'es',
-          'pt',
-          'ru'
-        ]
-
-        // Language mapping: system language code -> application language code
-        const languageMap: Record<string, string> = {
-          'zh-CN': 'zh-CN',
-          'zh-TW': 'zh-TW',
-          'zh-HK': 'zh-TW',
-          zh: 'zh-CN',
-          en: 'en',
-          'en-US': 'en',
-          'en-GB': 'en',
-          ja: 'ja',
-          'ja-JP': 'ja',
-          ko: 'ko',
-          'ko-KR': 'ko',
-          fr: 'fr',
-          'fr-FR': 'fr',
-          de: 'de',
-          'de-DE': 'de',
-          es: 'es',
-          'es-ES': 'es',
-          pt: 'pt',
-          'pt-BR': 'pt',
-          ru: 'ru',
-          'ru-RU': 'ru'
-        }
-
-        currentLanguage = languageMap[systemLanguage] || 'en'
-
-        // If the detected language is not in the supported list, use English
-        if (!supportedLanguages.includes(currentLanguage)) {
-          currentLanguage = 'en'
-        }
-
-        // Save the detected language setting
+        currentLanguage = DEFAULT_LANGUAGE
         this._accessor.preferences.setItem('language', currentLanguage)
-        log.info(`Auto-detected and set language to: ${currentLanguage}`)
+        log.info(`No language preference found; using default: ${currentLanguage}`)
       }
 
       setLanguage(currentLanguage)
       log.info(`Main process language initialized to: ${currentLanguage}`)
     } catch (error) {
       log.error('Failed to initialize main process language:', error)
-      // If an error occurs, use English as the default language
-      setLanguage('en')
+      setLanguage(DEFAULT_LANGUAGE)
     }
   }
 
@@ -701,7 +655,7 @@ class App {
     // Handle language setting requests
     ipcMain.on('mt::get-current-language', (event) => {
       const { language } = this._accessor.preferences.getAll()
-      event.reply('mt::current-language', language || 'en')
+      event.reply('mt::current-language', language || DEFAULT_LANGUAGE)
     })
 
     ipcMain.on('app-create-editor-window', () => {

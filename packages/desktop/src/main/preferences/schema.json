@@ -69,12 +69,12 @@
   "language": {
     "description": "General--The language MarkText uses.",
     "type": "string",
-    "default": "en"
+    "default": "zh-CN"
   },
   "shortcutStyle": {
     "description": "General--The shortcut style used for the built-in keyboard shortcuts.",
     "enum": ["marktext", "typora"],
-    "default": "marktext"
+    "default": "typora"
   },
   "editorFontFamily": {
     "description": "Editor--editor font family",
@@ -362,12 +362,12 @@
   "sideBarVisibility": {
     "description": "View--Whether the side bar is visible.--internal",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "tabBarVisibility": {
     "description": "View--Whether the tabs are shown.--internal",
     "type": "boolean",
-    "default": false
+    "default": true
   },
   "sourceCodeModeEnabled": {
     "description": "View--Whether the source-code mode is enabled by default.--internal",

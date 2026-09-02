@@ -2,10 +2,13 @@ import type { ShortcutStyle } from '@shared/types/preferences'
 
 export type ShortcutPlatform = 'darwin' | 'linux' | 'win32'
 
-export const DEFAULT_SHORTCUT_STYLE: ShortcutStyle = 'marktext'
+export const DEFAULT_SHORTCUT_STYLE: ShortcutStyle = 'typora'
 
 export const normalizeShortcutStyle = (style: unknown): ShortcutStyle => {
-  return style === 'typora' ? 'typora' : DEFAULT_SHORTCUT_STYLE
+  if (style === 'typora' || style === 'marktext') {
+    return style
+  }
+  return DEFAULT_SHORTCUT_STYLE
 }
 
 const chord = (modifier: string, ...keys: string[]): string => [modifier, ...keys].join('+')

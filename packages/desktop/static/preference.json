@@ -14,8 +14,8 @@
   "defaultDirectoryToOpen": "",
   "lastOpenedFolder": "",
   "treePathExcludePatterns": [],
-  "language": "en",
-  "shortcutStyle": "marktext",
+  "language": "zh-CN",
+  "shortcutStyle": "typora",
 
   "editorFontFamily": "Open Sans",
   "fontSize": 16,
@@ -68,8 +68,8 @@
   "spellcheckerNoUnderline": false,
   "spellcheckerLanguage": "en-US",
 
-  "sideBarVisibility": false,
-  "tabBarVisibility": false,
+  "sideBarVisibility": true,
+  "tabBarVisibility": true,
   "sourceCodeModeEnabled": false,
   "openedFilesInSidebar": true,
 

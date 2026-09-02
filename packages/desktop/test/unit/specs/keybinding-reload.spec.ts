@@ -38,7 +38,7 @@ type WinArg = Parameters<Keybindings['registerEditorKeyHandlers']>[0]
 
 const tmpDirs: string[] = []
 
-const makeKeybindings = (shortcutStyle: 'marktext' | 'typora' = 'marktext') => {
+const makeKeybindings = (shortcutStyle?: 'marktext' | 'typora') => {
   const userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-keybindings-'))
   tmpDirs.push(userDataPath)
   const commandManager = {
@@ -88,8 +88,17 @@ describe('Keybindings.setUserKeybindings live re-registration (#3681)', () => {
     expect(register).not.toHaveBeenCalled()
   })
 
-  it('switches presets live without changing custom keybindings', async() => {
+  it('uses Typora shortcuts when no persisted style is provided', () => {
     const kb = makeKeybindings()
+
+    expect(kb.getShortcutStyle()).toBe('typora')
+    expect(kb.getAccelerator('paragraph.heading-1')).toBe(
+      process.platform === 'darwin' ? 'Command+1' : 'Ctrl+1'
+    )
+  })
+
+  it('switches presets live without changing custom keybindings', async() => {
+    const kb = makeKeybindings('marktext')
     const win = { isDestroyed: () => false } as unknown as WinArg
     const customAccelerator = 'Ctrl+Alt+Shift+K'
 

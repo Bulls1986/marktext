@@ -156,8 +156,8 @@ export const usePreferencesStore = defineStore('preferences', {
     defaultDirectoryToOpen: '',
     lastOpenedFolder: '',
     treePathExcludePatterns: [],
-    language: 'en',
-    shortcutStyle: 'marktext',
+    language: 'zh-CN',
+    shortcutStyle: 'typora',
 
     editorFontFamily: 'Open Sans',
     fontSize: 16,
@@ -212,8 +212,8 @@ export const usePreferencesStore = defineStore('preferences', {
     spellcheckerLanguage: 'en-US',
 
     // Default values that are overwritten with the entries below.
-    sideBarVisibility: false,
-    tabBarVisibility: false,
+    sideBarVisibility: true,
+    tabBarVisibility: true,
     sourceCodeModeEnabled: false,
     openedFilesInSidebar: true,
 

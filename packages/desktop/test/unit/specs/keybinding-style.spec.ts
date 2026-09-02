@@ -3,6 +3,7 @@ import { isEqualAccelerator } from 'common/keybinding'
 import keybindingsLinux from 'main_renderer/keyboard/keybindingsLinux'
 import {
   applyShortcutStyle,
+  DEFAULT_SHORTCUT_STYLE,
   getShortcutStyleOverrides,
   normalizeShortcutStyle
 } from 'main_renderer/keyboard/shortcutStyles'
@@ -69,10 +70,12 @@ describe('shortcut style presets', () => {
     expect(defaults.get('window.zoomIn')).toBe('')
   })
 
-  it('falls back to the MarkText style for unknown persisted values', () => {
-    expect(normalizeShortcutStyle('unknown')).toBe('marktext')
-    expect(normalizeShortcutStyle(undefined)).toBe('marktext')
+  it('uses Typora as the default for missing or unknown persisted values', () => {
+    expect(DEFAULT_SHORTCUT_STYLE).toBe('typora')
+    expect(normalizeShortcutStyle('unknown')).toBe('typora')
+    expect(normalizeShortcutStyle(undefined)).toBe('typora')
     expect(normalizeShortcutStyle('typora')).toBe('typora')
+    expect(normalizeShortcutStyle('marktext')).toBe('marktext')
   })
 
   it('restores the defaults of the selected style and clears only custom entries', async() => {
@@ -98,7 +101,8 @@ describe('shortcut style presets', () => {
           ['format.hyperlink', 'Ctrl+L'],
           ['paragraph.heading-1', 'Ctrl+Alt+1']
         ]),
-        new Map([['format.hyperlink', 'Ctrl+Alt+K']])
+        new Map([['format.hyperlink', 'Ctrl+Alt+K']]),
+        'marktext'
       )
 
       expect(await configurator.setShortcutStyle('typora')).toBe(true)

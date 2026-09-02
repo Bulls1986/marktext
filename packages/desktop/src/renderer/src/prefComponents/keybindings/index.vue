@@ -144,7 +144,7 @@ const showDebugTools = ref<boolean>(false)
 const keybindingConfigurator = ref<KeybindingConfigurator | null>(null)
 const selectedShortcutId = ref<string | null>(null)
 const keybindingList = ref<UiKeybinding[]>([])
-const shortcutStyle = ref<ShortcutStyle>('marktext')
+const shortcutStyle = ref<ShortcutStyle>('typora')
 const styleChangeInProgress = ref<boolean>(false)
 
 // Function to rebuild the keybinding list
