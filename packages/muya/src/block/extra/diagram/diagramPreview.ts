@@ -11,9 +11,18 @@ import Parent from '../../base/parent';
 const debug = logger('diagramPreview:');
 export const DIAGRAM_RENDER_DEBOUNCE_MS = 200;
 
+type DiagramPresentationMode = 'source' | 'preview' | 'error';
+
+const DIAGRAM_PRESENTATION_CLASSES = {
+    source: 'mu-diagram-editing',
+    preview: 'mu-diagram-preview-only',
+    error: 'mu-diagram-error-state',
+} as const;
+
 class DiagramPreview extends Parent {
     private _code: string;
     private _type: IDiagramMeta['type'];
+    private _presentationMode: DiagramPresentationMode = 'source';
     private _renderGeneration = 0;
     private _renderTimer: ReturnType<typeof setTimeout> | null = null;
     private _renderWaiters = new Map<number, () => void>();
@@ -59,9 +68,33 @@ class DiagramPreview extends Parent {
         this._clickSubscription = clickObservable.subscribe(this.clickHandler.bind(this));
     }
 
+    /**
+     * Switch the diagram back to its source editor. This is intentionally
+     * public because DiagramBlock also uses it when focus enters the block.
+     */
+    showSource() {
+        this._setPresentationMode('source');
+    }
+
+    private _setPresentationMode(mode: DiagramPresentationMode) {
+        this._presentationMode = mode;
+        this.domNode?.setAttribute('data-diagram-mode', mode);
+
+        const parentNode = this.parent?.domNode;
+        if (!parentNode)
+            return;
+
+        Object.entries(DIAGRAM_PRESENTATION_CLASSES).forEach(([name, className]) => {
+            parentNode.classList.toggle(className, name === mode);
+        });
+        parentNode.setAttribute('data-diagram-mode', mode);
+    }
+
     clickHandler(event: Event) {
         event.preventDefault();
         event.stopPropagation();
+
+        this.showSource();
 
         if (this.parent == null)
             return;
@@ -100,6 +133,7 @@ class DiagramPreview extends Parent {
             this.domNode!.innerHTML = `<div class="${CLASS_NAMES.MU_EMPTY}">&lt; ${i18n.t(
                 'Empty Diagram',
             )} &gt;</div>`;
+            this._setPresentationMode('source');
             return;
         }
 
@@ -142,6 +176,7 @@ class DiagramPreview extends Parent {
             this._disposeDiagram = result.dispose;
             this._hasRenderedResult = true;
             this.domNode!.removeAttribute('data-diagram-error');
+            this._setPresentationMode('preview');
         }
         catch (error) {
             if (this._disposed || generation !== this._renderGeneration)
@@ -150,14 +185,14 @@ class DiagramPreview extends Parent {
             const detail
                 = error instanceof Error ? error.message : String(error);
             debug.error(`render ${type} diagram failed: ${detail}`);
-            if (this._hasRenderedResult) {
-                // Keep the last valid diagram visible while the user finishes
-                // typing. The detail is available to diagnostics without
-                // replacing or damaging the editable source block.
-                this.domNode!.setAttribute('data-diagram-error', detail);
-                return;
-            }
-
+            // Syntax errors are an editing state in Typora: keep the source
+            // visible and put the diagnostic next to it. Do not leave the
+            // previous SVG below the source, which makes the document appear
+            // to contain two versions of the same diagram.
+            this._hasRenderedResult = false;
+            this._disposeDiagram?.();
+            this._disposeDiagram = null;
+            this.domNode!.setAttribute('data-diagram-error', detail);
             this.domNode!.innerHTML = `<div class="mu-diagram-error">&lt; ${i18n.t(
                 'Invalid Diagram Code',
             )} &gt;<div class="mu-diagram-error-detail">${sanitize(
@@ -165,6 +200,7 @@ class DiagramPreview extends Parent {
                 PREVIEW_DOMPURIFY_CONFIG,
                 true,
             )}</div></div>`;
+            this._setPresentationMode('error');
         }
     }
 
@@ -174,7 +210,15 @@ class DiagramPreview extends Parent {
             return Promise.resolve();
 
         const generation = ++this._renderGeneration;
+        const sourceChanged = code !== this._code;
         this._code = code;
+
+        // A changed source is always shown while it is being edited. A
+        // same-source redraw (for example a theme refresh) keeps the current
+        // preview mode to avoid an unnecessary source/preview flash.
+        if (sourceChanged || !this._hasRenderedResult || this._presentationMode === 'error')
+            this.showSource();
+
         if (this._renderTimer !== null)
             clearTimeout(this._renderTimer);
         this._renderTimer = null;

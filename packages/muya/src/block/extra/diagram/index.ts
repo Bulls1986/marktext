@@ -12,6 +12,22 @@ class DiagramBlock extends Parent {
     public meta: IDiagramMeta;
     static override blockName = 'diagram';
 
+    // Focusing the source editor is an explicit request to edit the diagram.
+    // Keep this separate from the renderer result so a valid diagram can stay
+    // preview-only until the user enters it again.
+    override get active() {
+        return super.active;
+    }
+
+    override set active(value) {
+        super.active = value;
+        if (!value)
+            return;
+
+        const preview = this.attachments.head as (Parent & { showSource?: () => void }) | null;
+        preview?.showSource?.();
+    }
+
     static create(muya: Muya, state: IDiagramState) {
         const diagramBlock = new DiagramBlock(muya, state);
         const { lang } = state.meta;

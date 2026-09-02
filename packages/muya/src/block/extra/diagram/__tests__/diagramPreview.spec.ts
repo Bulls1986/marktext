@@ -58,6 +58,19 @@ function makePreview(text: string, type: IDiagramMeta['type'] = 'mermaid', local
     return { preview, muya, i18n };
 }
 
+function mountPreview(preview: DiagramPreview) {
+    const blockNode = document.createElement('figure');
+    blockNode.className = 'mu-diagram-block';
+    blockNode.append(preview.domNode!);
+    preview.parent = {
+        domNode: blockNode,
+        firstContentInDescendant: vi.fn(),
+    } as unknown as DiagramPreview['parent'];
+    bootedHosts.push(blockNode);
+
+    return blockNode;
+}
+
 describe('diagramPreview — empty state', () => {
     it('renders the empty-state class + localized "Empty Diagram" for empty code', async () => {
         const { preview } = makePreview('');
@@ -130,6 +143,7 @@ describe('diagramPreview — Mermaid auto-rendering', () => {
         });
 
         const { preview } = makePreview('graph TD\n  A --> B');
+        const blockNode = mountPreview(preview);
         await preview.update('graph TD\n  A --> B');
 
         expect(render).toHaveBeenCalledWith(
@@ -139,6 +153,8 @@ describe('diagramPreview — Mermaid auto-rendering', () => {
         expect(
             preview.domNode!.querySelector('[data-rendered="mermaid"]'),
         ).not.toBeNull();
+        expect(blockNode.classList.contains('mu-diagram-preview-only')).toBe(true);
+        expect(blockNode.classList.contains('mu-diagram-editing')).toBe(false);
     });
 
     it('debounces rapid source changes and renders only the latest source', async () => {
@@ -153,8 +169,11 @@ describe('diagramPreview — Mermaid auto-rendering', () => {
         });
 
         const { preview } = makePreview('graph TD\n  A --> B');
+        const blockNode = mountPreview(preview);
         const first = preview.update('graph TD\n  A --> B');
         const latest = preview.update('graph TD\n  A --> B --> C');
+
+        expect(blockNode.classList.contains('mu-diagram-editing')).toBe(true);
 
         await vi.advanceTimersByTimeAsync(199);
         expect(render).not.toHaveBeenCalled();
@@ -166,7 +185,7 @@ describe('diagramPreview — Mermaid auto-rendering', () => {
         expect(render.mock.calls[0][1]).toBe('graph TD\n  A --> B --> C');
     });
 
-    it('keeps the last valid SVG when a later edit is temporarily invalid', async () => {
+    it('shows source + error instead of appending a stale SVG below the source', async () => {
         const render = vi.fn()
             .mockResolvedValueOnce({ svg: '<svg data-rendered="valid"></svg>' })
             .mockRejectedValueOnce(new Error('Parse error'));
@@ -177,13 +196,14 @@ describe('diagramPreview — Mermaid auto-rendering', () => {
         });
 
         const { preview } = makePreview('graph TD\n  A --> B');
+        const blockNode = mountPreview(preview);
         await preview.update('graph TD\n  A --> B');
         await preview.update('graph TD\n  A -->');
 
-        expect(
-            preview.domNode!.querySelector('[data-rendered="valid"]'),
-        ).not.toBeNull();
+        expect(preview.domNode!.querySelector('[data-rendered="valid"]')).toBeNull();
         expect(preview.domNode!.getAttribute('data-diagram-error')).toBe('Parse error');
+        expect(blockNode.classList.contains('mu-diagram-error-state')).toBe(true);
+        expect(blockNode.classList.contains('mu-diagram-preview-only')).toBe(false);
     });
 });
 

@@ -847,6 +847,86 @@ figure.mu-active.mu-diagram-block > div.mu-diagram-preview {
     transform: translateX(-50%);
 }
 
+/* Diagram display follows the renderer state, like Typora: a valid, settled
+   diagram occupies the block by itself; the source is revealed only while the
+   user is editing or when the renderer reports an error. These rules override
+   the generic `mu-active` popup behaviour above for diagram blocks. */
+figure.mu-diagram-block.mu-diagram-preview-only > .mu-diagram-container {
+    position: absolute;
+    z-index: -1;
+
+    width: 0;
+    height: 0;
+    margin: 0;
+    overflow: visible;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+figure.mu-diagram-block.mu-diagram-preview-only > div.mu-diagram-preview {
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: 1;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0;
+
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    transform: none;
+}
+
+figure.mu-diagram-block.mu-diagram-editing > .mu-diagram-container,
+figure.mu-diagram-block.mu-diagram-error-state > .mu-diagram-container {
+    position: relative;
+    z-index: 1;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+
+    opacity: 1;
+}
+
+figure.mu-diagram-block.mu-diagram-editing > div.mu-diagram-preview {
+    position: absolute;
+    z-index: -1;
+
+    width: 0;
+    height: 0;
+    padding: 0;
+    overflow: visible;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+figure.mu-diagram-block.mu-diagram-error-state > div.mu-diagram-preview {
+    position: relative;
+    top: auto;
+    left: auto;
+    z-index: 1;
+
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.5rem 1rem;
+
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    transform: none;
+}
+
 figure.mu-math-block span.mu-codeblock-content:first-of-type:empty::after {
     color: var(--editor-color-30);
 
