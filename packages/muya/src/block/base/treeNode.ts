@@ -264,9 +264,25 @@ class TreeNode implements ILinkedNode {
         if (!this.parent)
             return;
 
+        // Removing a block can detach the DOM nodes that back the native
+        // selection. WebKit may keep that selection object with zero ranges;
+        // the next mouseup then calls Selection.extend() and throws
+        // InvalidStateError. Clear only selections whose endpoint is inside
+        // this block, leaving unrelated editor selections untouched.
+        const domNode = this.domNode;
+        const selection = domNode?.ownerDocument.getSelection();
+        if (
+            domNode
+            && selection?.rangeCount
+            && ((selection.anchorNode && domNode.contains(selection.anchorNode))
+                || (selection.focusNode && domNode.contains(selection.focusNode)))
+        ) {
+            selection.removeAllRanges();
+        }
+
         this.parent.children.remove(this);
         this.parent = null;
-        this.domNode?.remove();
+        domNode?.remove();
 
         return this;
     }

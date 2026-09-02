@@ -21,6 +21,7 @@ const ERROR_MSG_MAIN = (): string => t('error.unexpectedMainProcess')
 const ERROR_MSG_RENDERER = (): string => t('error.unexpectedRendererProcess')
 
 let logger: Logger = (s) => console.error(s)
+const activeRendererErrorSignatures = new Set<string>()
 
 const getOSInformation = (): string => {
   return `${os.type()} ${os.arch()} ${os.release()} (${os.platform()})`
@@ -107,6 +108,20 @@ Operating system: ${getOSInformation()}`
   }
 }
 
+const handleRendererError = (error: Error): void => {
+  // A renderer event can be delivered more than once while a modal is open
+  // (for example, error + unhandled-rejection from the same operation). Keep
+  // one dialog per identical failure so dismissing it cannot open a second
+  // copy of the same message immediately.
+  const signature = `${error.name}\n${error.message}\n${error.stack ?? ''}`
+  if (activeRendererErrorSignatures.has(signature))
+    return
+
+  activeRendererErrorSignatures.add(signature)
+  void handleError(ERROR_MSG_RENDERER(), error, 'renderer')
+    .finally(() => activeRendererErrorSignatures.delete(signature))
+}
+
 const setupExceptionHandler = (): void => {
   // Suppress EPIPE errors when electron-log writes to a closed pipe.
   const ignoreEpipe = (err: NodeJS.ErrnoException): void => {
@@ -122,7 +137,7 @@ const setupExceptionHandler = (): void => {
 
   // renderer process error handler
   ipcMain.on('mt::handle-renderer-error', (_e, error: Error) => {
-    handleError(ERROR_MSG_RENDERER(), error, 'renderer')
+    handleRendererError(error)
   })
 
   // start crashReporter to save core dumps to temporary folder

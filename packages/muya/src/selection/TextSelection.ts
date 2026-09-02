@@ -273,13 +273,18 @@ class TextSelection {
         };
 
         const handleMouseupOrLeave = () => {
-            if (this._selectInfo.selection)
-                this.setSelection(this._selectInfo.selection.anchor, this._selectInfo.selection.focus);
-
+            // Clear the pending drag state before restoring it. A DOM edit can
+            // detach one of the saved endpoints between mousemove and mouseup;
+            // if restoring it throws, the following mouseleave/mouseup must not
+            // retry the same stale selection forever.
+            const pendingSelection = this._selectInfo.selection;
             this._selectInfo = {
                 isSelect: false,
                 selection: null,
             };
+
+            if (pendingSelection)
+                this.setSelection(pendingSelection.anchor, pendingSelection.focus);
         };
 
         const handleMousemoveOrClick = (event: Event) => {
@@ -321,13 +326,56 @@ class TextSelection {
         eventCenter.attachDOMEvent(domNode, 'click', handleMousemoveOrClick);
     }
 
+    private _isLiveNode(node: Node | null): node is Node {
+        return !!node
+            && node.ownerDocument === this._doc
+            && this._muya.domNode.contains(node);
+    }
+
+    private _resolveEndpoint(block: Nullable<Content>, path: TBlockPath) {
+        const paragraph = block?.domNode;
+        if (block && paragraph && this._isLiveNode(paragraph))
+            return { block, paragraph };
+
+        const resolvedBlock = this._scrollPage?.queryBlock([...path]);
+        const resolvedParagraph = resolvedBlock?.isContent() ? resolvedBlock.domNode : null;
+        if (resolvedBlock?.isContent() && resolvedParagraph && this._isLiveNode(resolvedParagraph))
+            return { block: resolvedBlock, paragraph: resolvedParagraph };
+
+        return null;
+    }
+
+    private _normalizeOffset(block: Content, offset: number) {
+        if (!Number.isFinite(offset) || offset < 0)
+            return 0;
+
+        return Math.min(offset, block.text.length);
+    }
+
+    private _clearNativeSelection() {
+        const selection = this._doc.getSelection();
+        if (selection)
+            selection.removeAllRanges();
+    }
+
     private _selectRange(range: Range) {
         const selection = this._doc.getSelection();
 
-        if (selection) {
+        if (!selection)
+            return false;
+
+        try {
             selection.removeAllRanges();
             selection.addRange(range);
         }
+        catch {
+            return false;
+        }
+
+        // WebKit can silently reject a range whose endpoint was detached by a
+        // concurrent DOM update. `extend()` throws InvalidStateError when there
+        // is no range, so never report success based only on addRange returning.
+        return selection.rangeCount > 0;
     }
 
     private _select(
@@ -336,22 +384,39 @@ class TextSelection {
         endNode?: Node,
         endOffset?: number,
     ) {
-        const range = this._doc.createRange();
-        range.setStart(startNode, getLegalOffset(startNode, startOffset));
-        if (endNode && typeof endOffset === 'number')
-            range.setEnd(endNode, getLegalOffset(endNode, endOffset));
-        else
-            range.collapse(true);
+        if (!this._isLiveNode(startNode) || (endNode && !this._isLiveNode(endNode)))
+            return null;
 
-        this._selectRange(range);
+        try {
+            const range = this._doc.createRange();
+            range.setStart(startNode, getLegalOffset(startNode, startOffset));
+            if (endNode && typeof endOffset === 'number')
+                range.setEnd(endNode, getLegalOffset(endNode, endOffset));
+            else
+                range.collapse(true);
 
-        return range;
+            return this._selectRange(range) ? range : null;
+        }
+        catch {
+            return null;
+        }
     }
 
     private _setFocus(focusNode: Node, focusOffset: number) {
         const selection = this._doc.getSelection();
-        if (selection)
+        if (!selection || selection.rangeCount === 0 || !this._isLiveNode(focusNode))
+            return;
+
+        try {
             selection.extend(focusNode, getLegalOffset(focusNode, focusOffset));
+        }
+        catch {
+            // A DOM replacement can invalidate the native range between the
+            // guard above and extend(). Recover with a collapsed caret when the
+            // focus node is still live; never let a browser Selection error
+            // escape into the renderer process.
+            this._select(focusNode, focusOffset);
+        }
     }
 
     private _updateSelection() {
@@ -374,29 +439,67 @@ class TextSelection {
             return;
         }
 
-        const anchorParagraph = anchorBlock
-            ? anchorBlock.domNode
-            : scrollPage?.queryBlock(anchorPath);
-        const focusParagraph = focusBlock
-            ? focusBlock.domNode
-            : scrollPage?.queryBlock(focusPath);
+        const anchorEndpoint = this._resolveEndpoint(anchorBlock, anchorPath);
+        const focusEndpoint = this._resolveEndpoint(focusBlock, focusPath);
 
-        // getNodeAndOffset expects a DOM Node. The fallback branch can hand
-        // back a Parent/Content block (from scrollPage.queryBlock); narrow to
-        // an actual Node here, preserving the existing not-found behavior.
-        if (!(anchorParagraph instanceof Node) || !(focusParagraph instanceof Node))
+        // A block may have been removed or replaced after the selection was
+        // captured. Prefer the endpoint that still resolves, otherwise use the
+        // first live content block. This turns a stale selection into a safe
+        // caret instead of feeding detached nodes to the DOM Range API.
+        if (!anchorEndpoint || !focusEndpoint) {
+            const fallbackEndpoint = anchorEndpoint ?? focusEndpoint;
+            const fallbackBlock = fallbackEndpoint?.block ?? scrollPage?.firstContentInDescendant();
+            const paragraph = fallbackEndpoint?.paragraph ?? fallbackBlock?.domNode;
+
+            if (!fallbackBlock || !paragraph || !this._isLiveNode(paragraph)) {
+                this.anchor = null;
+                this.focus = null;
+                this.anchorBlock = null;
+                this.focusBlock = null;
+                this.anchorPath = [];
+                this.focusPath = [];
+                this._clearNativeSelection();
+                return;
+            }
+
+            const sourceOffset = anchorEndpoint
+                ? anchor.offset
+                : focusEndpoint
+                    ? focus.offset
+                    : 0;
+            const offset = this._normalizeOffset(fallbackBlock, sourceOffset);
+            this.anchor = { offset };
+            this.focus = { offset };
+            this.anchorBlock = fallbackBlock;
+            this.focusBlock = fallbackBlock;
+            this.anchorPath = [...fallbackBlock.path];
+            this.focusPath = [...fallbackBlock.path];
+
+            const { node, offset: nodeOffset } = getNodeAndOffset(paragraph, offset);
+            this._select(node, nodeOffset);
             return;
-        const { node: anchorNode, offset: anchorOffset } = getNodeAndOffset(
-            anchorParagraph,
-            anchor.offset,
+        }
+
+        const anchorOffset = this._normalizeOffset(anchorEndpoint.block, anchor.offset);
+        const focusOffset = this._normalizeOffset(focusEndpoint.block, focus.offset);
+        this.anchorBlock = anchorEndpoint.block;
+        this.anchorPath = [...anchorEndpoint.block.path];
+        this.anchor = { offset: anchorOffset };
+        this.focusBlock = focusEndpoint.block;
+        this.focusPath = [...focusEndpoint.block.path];
+        this.focus = { offset: focusOffset };
+
+        const { node: anchorNode, offset: anchorNodeOffset } = getNodeAndOffset(
+            anchorEndpoint.paragraph,
+            anchorOffset,
         );
-        const { node: focusNode, offset: focusOffset } = getNodeAndOffset(
-            focusParagraph,
-            focus.offset,
+        const { node: focusNode, offset: focusNodeOffset } = getNodeAndOffset(
+            focusEndpoint.paragraph,
+            focusOffset,
         );
 
-        this._select(anchorNode, anchorOffset);
-        this._setFocus(focusNode, focusOffset);
+        if (this._select(anchorNode, anchorNodeOffset))
+            this._setFocus(focusNode, focusNodeOffset);
     }
 }
 

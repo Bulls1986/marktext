@@ -50,10 +50,10 @@ jobs:
           #   os: windows-11-arm
           #   platform: windows
           #   arch: arm64
-          # - name: macos-x64
-          #   os: macos-15-intel
-          #   platform: macos
-          #   arch: x64
+          - name: macos-x64
+            os: macos-15-intel
+            platform: macos
+            arch: x64
           # - name: macos-arm64
           #   os: macos-15
           #   platform: macos
@@ -95,10 +95,10 @@ jobs:
             electron-${{ matrix.os }}-
 
       # Must be set before postinstall runs electron-rebuild
-      # - name: Set C++20 for MacOS
-      #   if: matrix.platform == 'macos'
-      #   run: |
-      #     echo "CXXFLAGS=-std=gnu++20 -stdlib=libc++" >> $GITHUB_ENV
+      - name: Set C++20 for MacOS
+        if: matrix.platform == 'macos'
+        run: |
+          echo "CXXFLAGS=-std=gnu++20 -stdlib=libc++" >> $GITHUB_ENV
 
       # Run the full postinstall: Electron binary download, patch-package,
       # electron-rebuild, and minify-locales.
@@ -120,11 +120,11 @@ jobs:
       # --arm64/--x64 flags are additive over the config's arch list, so
       # electron-builder.yml must not pin mac.target arches for the flag to
       # actually restrict the build to a single arch.
-      # - name: build-mac
-      #   if: matrix.platform == 'macos'
-      #   run: pnpm run build:mac:${{ matrix.arch }}
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: build-mac
+        if: matrix.platform == 'macos'
+        run: pnpm run build:mac:${{ matrix.arch }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: build-win
         if: matrix.platform == 'windows'
@@ -141,7 +141,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.zip
-            # dist/*.dmg
+            dist/*.dmg
             dist/*.blockmap
             dist/*.yml
             dist/*.AppImage
@@ -191,7 +191,6 @@ jobs:
               echo "- May contain bugs and unfinished features."
               echo ""
             fi
-            # macOS packaging is temporarily disabled.
             echo "## Verifying downloads"
             echo "All artifacts are listed with their SHA-256 in \`SHA256SUMS.txt\`. Verify with:"
             echo '```'

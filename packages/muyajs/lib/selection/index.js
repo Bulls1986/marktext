@@ -399,7 +399,17 @@ class Selection {
 
   setFocus(focusNode, focusOffset) {
     const selection = this.doc.getSelection()
-    selection.extend(focusNode, clampLegalOffset(focusNode, focusOffset))
+    // WebKit can leave Selection without a range after the DOM node that held
+    // the caret was replaced. Calling extend() in that state throws
+    // InvalidStateError and used to bubble into the renderer process.
+    if (!selection || selection.rangeCount === 0) return false
+
+    try {
+      selection.extend(focusNode, clampLegalOffset(focusNode, focusOffset))
+      return true
+    } catch (_error) {
+      return false
+    }
   }
 
   /**
@@ -438,8 +448,16 @@ class Selection {
   selectRange(range) {
     const selection = this.doc.getSelection()
 
-    selection.removeAllRanges()
-    selection.addRange(range)
+    if (!selection) return false
+
+    try {
+      selection.removeAllRanges()
+      selection.addRange(range)
+    } catch (_error) {
+      return false
+    }
+
+    return selection.rangeCount > 0
   }
 
   // https://stackoverflow.com/questions/1197401/

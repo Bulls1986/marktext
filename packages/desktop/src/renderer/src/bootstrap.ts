@@ -74,11 +74,31 @@ const isCodeMirrorRaceCondition = (error: Error | null | undefined): boolean => 
   return isMapOnUndefined && isInPrepareMeasure && isInCoordsChar
 }
 
+/**
+ * WebKit can report a native Selection with no ranges while a Muya block is
+ * being replaced. Selection.extend() is guarded in the editor now, but keep
+ * this renderer boundary defensive for already-built documents and older
+ * code paths. This is a recoverable editor race, not an application crash.
+ */
+const isSelectionRangeRaceCondition = (error: Error | null | undefined): boolean => {
+  if (!error || error.name !== 'InvalidStateError') return false
+
+  return /Selection object doesn't have any Ranges/i.test(error.message)
+}
+
 const handleRendererError = (event: ErrorEvent | PromiseRejectionEvent | Event): void => {
   const errorEvent = event as ErrorEvent
   if (errorEvent.error) {
     if (isCodeMirrorRaceCondition(errorEvent.error)) {
       console.warn('Suppressed non-fatal CodeMirror race condition:', errorEvent.error.message)
+      return
+    }
+
+    if (isSelectionRangeRaceCondition(errorEvent.error)) {
+      console.warn(
+        'Suppressed non-fatal native Selection race condition:',
+        errorEvent.error.message
+      )
       return
     }
 
