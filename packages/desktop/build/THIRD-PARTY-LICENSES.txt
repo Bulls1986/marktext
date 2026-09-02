@@ -28,39 +28,38 @@ This file contains all third-party packages that are bundled and shipped with Ma
 19. dragula (MIT)
 20. electron-log (MIT)
 21. electron-store (MIT)
-22. electron-updater (MIT)
-23. electron-window-state (MIT)
-24. element-plus (MIT)
-25. element-resize-detector (MIT)
-26. execall (MIT)
-27. flowchart.js (MIT)
-28. font-list (MIT)
-29. fs-extra (MIT)
-30. fuzzaldrin (MIT)
-31. github-markdown-css (MIT)
-32. html-tags (MIT)
-33. iso-639-1 (MIT)
-34. joplin-turndown-plugin-gfm (MIT)
-35. katex (MIT)
-36. keytar (MIT)
-37. languine (MIT)
-38. lodash (MIT)
-39. marktext (MIT*)
-40. mermaid (MIT)
-41. mitt (MIT)
-42. native-keymap (MIT)
-43. pinia (MIT)
-44. prismjs (MIT)
-45. snabbdom-to-html (MIT)
-46. snabbdom (MIT)
-47. snapsvg-cjs (MIT)
-48. turndown (MIT)
-49. underscore (MIT)
-50. vega-embed (BSD-3-Clause)
-51. vite-plugin-prismjs (MIT)
-52. vue-i18n (MIT)
-53. vue-router (MIT)
-54. webfontloader (Apache-2.0)
+22. electron-window-state (MIT)
+23. element-plus (MIT)
+24. element-resize-detector (MIT)
+25. execall (MIT)
+26. flowchart.js (MIT)
+27. font-list (MIT)
+28. fs-extra (MIT)
+29. fuzzaldrin (MIT)
+30. github-markdown-css (MIT)
+31. html-tags (MIT)
+32. iso-639-1 (MIT)
+33. joplin-turndown-plugin-gfm (MIT)
+34. katex (MIT)
+35. keytar (MIT)
+36. languine (MIT)
+37. lodash (MIT)
+38. marktext (MIT*)
+39. mermaid (MIT)
+40. mitt (MIT)
+41. native-keymap (MIT)
+42. pinia (MIT)
+43. prismjs (MIT)
+44. snabbdom-to-html (MIT)
+45. snabbdom (MIT)
+46. snapsvg-cjs (MIT)
+47. turndown (MIT)
+48. underscore (MIT)
+49. vega-embed (BSD-3-Clause)
+50. vite-plugin-prismjs (MIT)
+51. vue-i18n (MIT)
+52. vue-router (MIT)
+53. webfontloader (Apache-2.0)
 
 
 -------------------------------------------------
@@ -188,12 +187,6 @@ undefined
 
 
 # electron-store (MIT)
--------------------------------------------------
-undefined
-
-
-
-# electron-updater (MIT)
 -------------------------------------------------
 undefined
 
@@ -388,7 +381,5 @@ undefined
 # webfontloader (Apache-2.0)
 -------------------------------------------------
 undefined
-
-
 
 

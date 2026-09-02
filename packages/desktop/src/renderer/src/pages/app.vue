@@ -59,7 +59,6 @@ import { usePreferencesStore } from '@/store/preferences'
 import { useEditorStore } from '@/store/editor'
 import { useCommandCenterStore } from '@/store/commandCenter'
 import { useProjectStore } from '@/store/project'
-import { useAutoUpdatesStore } from '@/store/autoUpdates'
 import { useNotificationStore } from '@/store/notification'
 
 const mainStore = useMainStore()
@@ -68,7 +67,6 @@ const preferencesStore = usePreferencesStore()
 const layoutStore = useLayoutStore()
 const projectStore = useProjectStore()
 const listenForMainStore = useListenForMainStore()
-const autoUpdateStore = useAutoUpdatesStore()
 const commandCenterStore = useCommandCenterStore()
 const notificationStore = useNotificationStore()
 
@@ -170,7 +168,6 @@ onMounted(async () => {
   projectStore.LISTEN_FOR_UPDATE_PROJECT()
   projectStore.LISTEN_FOR_LOAD_PROJECT()
   projectStore.LISTEN_FOR_SIDEBAR_CONTEXT_MENU()
-  autoUpdateStore.LISTEN_FOR_UPDATE()
   preferencesStore.ASK_FOR_USER_PREFERENCE()
   preferencesStore.LISTEN_TOGGLE_VIEW()
   editorStore.LISTEN_SCREEN_SHOT()

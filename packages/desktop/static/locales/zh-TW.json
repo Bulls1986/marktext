@@ -94,13 +94,11 @@
       "followUs": "關注我們",
       "support": "支持 MarkText",
       "license": "授權條款",
-      "about": "關於",
-      "checkUpdates": "檢查更新"
+      "about": "關於"
     },
     "marktext": {
       "title": "關於",
       "about": "關於 MarkText",
-      "checkUpdates": "檢查更新…",
       "preferences": "偏好設定",
       "services": "服務",
       "hide": "隱藏 MarkText",
@@ -758,8 +756,7 @@
       "importFile": "匯入檔案",
       "exportFile": "匯出檔案",
       "exportFilePdf": "匯出為 PDF",
-      "zoom": "縮放",
-      "checkUpdate": "檢查更新"
+      "zoom": "縮放"
     },
     "edit": {
       "undo": "復原",

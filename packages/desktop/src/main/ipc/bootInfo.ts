@@ -1,5 +1,3 @@
-import path from 'path'
-import fs from 'fs-extra'
 import { app, ipcMain } from 'electron'
 import { rgPath } from '@vscode/ripgrep'
 import { MARKDOWN_INCLUSIONS } from 'common/filesystem/paths'
@@ -32,25 +30,6 @@ const resolveRipgrepBinary = (): string => {
   return rgPath.replace(/\bapp\.asar\b/, 'app.asar.unpacked')
 }
 
-const computeIsUpdatable = (): boolean => {
-  const resources = process.resourcesPath
-  if (!resources) return false
-  try {
-    if (!fs.pathExistsSync(path.join(resources, 'app-update.yml'))) return false
-  } catch {
-    return false
-  }
-  if (process.env.APPIMAGE) return true
-  if (process.platform === 'win32') {
-    try {
-      return fs.pathExistsSync(path.join(resources, 'md.ico'))
-    } catch {
-      return false
-    }
-  }
-  return false
-}
-
 const buildBootInfo = (): BootInfo => ({
   platform: process.platform,
   arch: process.arch,
@@ -66,7 +45,6 @@ const buildBootInfo = (): BootInfo => ({
     userData: app.getPath('userData'),
     cwd: process.cwd()
   },
-  isUpdatable: computeIsUpdatable(),
   MARKDOWN_INCLUSIONS: [...MARKDOWN_INCLUSIONS]
 })
 

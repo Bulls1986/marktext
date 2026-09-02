@@ -94,13 +94,11 @@
       "followUs": "フォローする",
       "support": "MarkTextを支援",
       "license": "ライセンス",
-      "about": "について",
-      "checkUpdates": "アップデートを確認"
+      "about": "について"
     },
     "marktext": {
       "title": "MarkText",
       "about": "MarkTextについて",
-      "checkUpdates": "アップデートを確認...",
       "preferences": "環境設定",
       "services": "サービス",
       "hide": "MarkTextを隠す",
@@ -758,8 +756,7 @@
       "importFile": "ファイルをインポート",
       "exportFile": "ファイルをエクスポート",
       "exportFilePdf": "PDFとしてエクスポート",
-      "zoom": "ズーム",
-      "checkUpdate": "アップデートを確認"
+      "zoom": "ズーム"
     },
     "edit": {
       "undo": "元に戻す",

@@ -108,7 +108,6 @@ export interface IpcSendChannels {
   'broadcast-user-data-changed': [partial: unknown]
   'menu-add-recently-used': [filePath: string]
   'menu-clear-recently-used': []
-  'mt::NEED_UPDATE': [payload?: unknown]
   'mt::add-recently-used-document': [filePath: string]
   'mt::app-try-quit': []
   'mt::ask-for-image-auto-path': [payload: unknown]
@@ -116,7 +115,6 @@ export interface IpcSendChannels {
   'mt::ask-for-open-project-in-sidebar': []
   'mt::ask-for-user-data': []
   'mt::ask-for-user-preference': []
-  'mt::check-for-update': []
   'mt::clipboard::write-text': [text: string]
   'mt::close-window': []
   'mt::close-window-confirm': [unsavedFiles: UnsavedFile[]]
@@ -224,10 +222,6 @@ export interface IpcSyncChannels {
 
 export interface IpcMainEventChannels {
   'language-changed': [language: string]
-  'mt::UPDATE_AVAILABLE': [info?: unknown]
-  'mt::UPDATE_DOWNLOADED': [info?: unknown]
-  'mt::UPDATE_ERROR': [error: unknown]
-  'mt::UPDATE_NOT_AVAILABLE': [info?: unknown]
   'mt::about-dialog': []
   'mt::ask-for-close': []
   'mt::bootstrap-editor': [config: BootstrapEditorConfig]
@@ -321,7 +315,6 @@ export interface BootInfo {
     cwd: string
     ripgrepBinary: string
   }
-  isUpdatable: boolean
   MARKDOWN_INCLUSIONS: string[]
 }
 

@@ -94,13 +94,11 @@
       "followUs": "关注我们",
       "support": "支持 MarkText",
       "license": "许可证",
-      "about": "关于",
-      "checkUpdates": "检查更新"
+      "about": "关于"
     },
     "marktext": {
       "title": "MarkText",
       "about": "关于 MarkText",
-      "checkUpdates": "检查更新…",
       "preferences": "偏好设置",
       "services": "服务",
       "hide": "隐藏 MarkText",
@@ -762,7 +760,6 @@
       "exportFile": "导出文件",
       "exportFilePdf": "导出为 PDF",
       "zoom": "缩放",
-      "checkUpdate": "检查更新",
       "changeLineEnding": "更改行结束符"
     },
     "edit": {

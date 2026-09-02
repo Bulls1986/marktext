@@ -94,13 +94,11 @@
       "followUs": "Siga-nos",
       "support": "Apoiar MarkText",
       "license": "Licença",
-      "about": "Sobre",
-      "checkUpdates": "Verificar Atualizações"
+      "about": "Sobre"
     },
     "marktext": {
       "title": "MarkText",
       "about": "Sobre MarkText",
-      "checkUpdates": "Verificar Atualizações...",
       "preferences": "Preferências",
       "services": "Serviços",
       "hide": "Ocultar MarkText",
@@ -758,8 +756,7 @@
       "importFile": "Importar Arquivo",
       "exportFile": "Exportar Arquivo",
       "exportFilePdf": "Exportar como PDF",
-      "zoom": "Zoom",
-      "checkUpdate": "Verificar Atualizações"
+      "zoom": "Zoom"
     },
     "edit": {
       "undo": "Desfazer",

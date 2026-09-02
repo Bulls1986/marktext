@@ -94,13 +94,11 @@
       "followUs": "팔로우하기",
       "support": "MarkText 후원",
       "license": "라이선스",
-      "about": "정보",
-      "checkUpdates": "업데이트 확인"
+      "about": "정보"
     },
     "marktext": {
       "title": "MarkText",
       "about": "MarkText 정보",
-      "checkUpdates": "업데이트 확인...",
       "preferences": "환경설정",
       "services": "서비스",
       "hide": "MarkText 숨기기",
@@ -758,8 +756,7 @@
       "importFile": "파일 가져오기",
       "exportFile": "파일 내보내기",
       "exportFilePdf": "PDF로 내보내기",
-      "zoom": "확대/축소",
-      "checkUpdate": "업데이트 확인"
+      "zoom": "확대/축소"
     },
     "edit": {
       "undo": "실행 취소",

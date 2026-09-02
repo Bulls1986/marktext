@@ -1,7 +1,6 @@
 // List of all static commands that are loaded into command center.
 import bus from '../bus'
 import { delay, isOsx } from '@/util'
-import { isUpdatable } from './utils'
 import getCommandDescriptionById from './descriptions'
 import { t } from '../i18n'
 
@@ -682,16 +681,6 @@ const commands: CommandDescriptor[] = [
 
 // --------------------------------------------------------------------------
 // etc
-
-if (isUpdatable()) {
-  commands.push({
-    id: 'file.check-update',
-    description: getCommandDescriptionById('file.check-update'),
-    execute: async() => {
-      window.electron.ipcRenderer.send('mt::check-for-update')
-    }
-  })
-}
 
 if (isOsx) {
   commands.push({

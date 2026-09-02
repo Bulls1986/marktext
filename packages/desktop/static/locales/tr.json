@@ -94,13 +94,11 @@
       "followUs": "Bizi Takip Edin",
       "support": "MarkText'e Destek Ol",
       "license": "Lisans",
-      "about": "Hakkında",
-      "checkUpdates": "Güncellemeleri Denetle"
+      "about": "Hakkında"
     },
     "marktext": {
       "title": "MarkText",
       "about": "MarkText Hakkında",
-      "checkUpdates": "Güncellemeleri Denetle...",
       "preferences": "Tercihler",
       "services": "Hizmetler",
       "hide": "MarkText'i Gizle",
@@ -758,8 +756,7 @@
       "importFile": "Dosya İçe Aktar",
       "exportFile": "Dosya Dışa Aktar",
       "exportFilePdf": "PDF Olarak Dışa Aktar",
-      "zoom": "Yakınlaştırma",
-      "checkUpdate": "Güncellemeleri Denetle"
+      "zoom": "Yakınlaştırma"
     },
     "edit": {
       "undo": "Geri Al",

@@ -12,7 +12,7 @@ import {
 import log from 'electron-log'
 import { isDirectory, isFile, exists } from 'common/filesystem'
 import { MARKDOWN_EXTENSIONS, isDangerousExecutableFile, isMarkdownFile } from 'common/filesystem/paths'
-import { checkUpdates, userSetting } from './marktext'
+import { userSetting } from './marktext'
 import { showTabBar } from './view'
 import { COMMANDS } from '../../commands'
 import type { CommandManager } from '../../commands'
@@ -829,7 +829,6 @@ export const clearRecentlyUsed = (): void => {
 // --- Commands -------------------------------------------------------------
 
 export const loadFileCommands = (commandManager: CommandManager): void => {
-  commandManager.add(COMMANDS.FILE_CHECK_UPDATE, checkUpdates)
   commandManager.add(COMMANDS.FILE_CLOSE_TAB, closeTab)
   commandManager.add(COMMANDS.FILE_CLOSE_WINDOW, closeWindow)
   commandManager.add(COMMANDS.FILE_EXPORT_FILE, exportFile)

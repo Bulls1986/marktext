@@ -17,12 +17,6 @@ export default function(keybindings: Keybindings): MenuItemConstructorOptions {
         }
       },
       {
-        label: t('menu.marktext.checkUpdates'),
-        click(_menuItem, focusedWindow) {
-          actions.checkUpdates((focusedWindow as BrowserWindow | undefined) ?? null)
-        }
-      },
-      {
         label: t('menu.marktext.preferences'),
         accelerator: keybindings.getAccelerator('file.preferences') ?? undefined,
         click() {
