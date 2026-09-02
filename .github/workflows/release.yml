@@ -54,7 +54,7 @@ jobs:
             os: macos-15-intel
             platform: macos
             arch: x64
-          - name: mac-arm
+          - name: mac-arm64
             os: macos-15
             platform: macos
             arch: arm64
