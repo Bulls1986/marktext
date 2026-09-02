@@ -153,10 +153,10 @@ class CodeBlockContent extends Content {
         // attached, when outContainer cannot resolve its parent chain.
         if (!this._codeContainer)
             return;
-        // Only re-render when the text actually changed. update() is called on
-        // every render pass; without this guard a diagram's create-pass render
-        // and update()'s render race (DiagramPreview.update is async), leaving
-        // the SVG unmounted.
+        // Only notify the preview when the text actually changed. Diagram
+        // previews debounce the notification themselves; without this guard a
+        // diagram's create-pass render and every render pass would still queue
+        // redundant work.
         if (text === this._lastPreviewText)
             return;
         this._lastPreviewText = text;

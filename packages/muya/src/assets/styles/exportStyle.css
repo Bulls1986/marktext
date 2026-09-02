@@ -149,3 +149,19 @@
 
     text-align: center;
 }
+
+/* flowchart.js and js-sequence-diagrams emit fixed pixel dimensions without a
+   viewBox. The renderer adapter adds one, and these rules make every exported
+   diagram scale to the document width instead of being clipped. */
+.markdown-body div.mermaid > svg,
+.markdown-body div.vega-lite > svg,
+.markdown-body div.flowchart > svg,
+.markdown-body div.sequence > svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.markdown-body div.plantuml > img {
+    max-width: 100%;
+    height: auto;
+}

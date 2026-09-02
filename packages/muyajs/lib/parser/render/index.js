@@ -1,5 +1,4 @@
-import loadRenderer from '../../renderers'
-import { renderMermaid } from '../../renderers/mermaid.js'
+import { renderDiagram } from '../../renderers/diagram.js'
 import { CLASS_OR_ID } from '../../config'
 import { conflict, mixins, camelToSnake } from '../../utils'
 import { patch, toVNode, toHTML, h } from './snabbdom'
@@ -16,6 +15,7 @@ class StateRender {
     this.loadMathMap = new Map()
     this.mermaidCache = new Map()
     this.diagramCache = new Map()
+    this.diagramRenderVersion = 0
     this.tokenCache = new Map()
     this.labels = new Map()
     this.urlMap = new Map()
@@ -101,7 +101,7 @@ class StateRender {
     return selector
   }
 
-  async renderMermaid() {
+  async renderMermaid(version = this.diagramRenderVersion) {
     if (this.mermaidCache.size) {
       for (const [key, value] of this.mermaidCache.entries()) {
         const { code } = value
@@ -110,10 +110,19 @@ class StateRender {
           continue
         }
         try {
-          const { svg, bindFunctions } = await renderMermaid(
+          const { svg, bindFunctions } = await renderDiagram({
+            type: 'mermaid',
             code,
-            this.muya.options.mermaidTheme
-          )
+            target,
+            mermaidTheme: this.muya.options.mermaidTheme,
+            vegaTheme: this.muya.options.vegaTheme,
+            sequenceTheme: this.muya.options.sequenceTheme,
+            plantumlServer: this.muya.options.plantumlServer,
+            isCurrent: () => version === this.diagramRenderVersion
+          })
+          if (version !== this.diagramRenderVersion) {
+            continue
+          }
           target.innerHTML = svg
           if (bindFunctions) {
             bindFunctions(target)
@@ -128,45 +137,28 @@ class StateRender {
     }
   }
 
-  async renderDiagram() {
+  async renderDiagram(version = this.diagramRenderVersion) {
     const cache = this.diagramCache
     if (cache.size) {
-      const RENDER_MAP = {
-        flowchart: await loadRenderer('flowchart'),
-        sequence: await loadRenderer('sequence'),
-        plantuml: await loadRenderer('plantuml'),
-        'vega-lite': await loadRenderer('vega-lite')
-      }
-
       for (const [key, value] of cache.entries()) {
         const target = document.querySelector(key)
         if (!target) {
           continue
         }
         const { code, functionType } = value
-        const render = RENDER_MAP[functionType]
-        const options = {}
-        if (functionType === 'sequence') {
-          Object.assign(options, { theme: this.muya.options.sequenceTheme })
-        } else if (functionType === 'vega-lite') {
-          Object.assign(options, {
-            actions: false,
-            tooltip: false,
-            renderer: 'svg',
-            theme: this.muya.options.vegaTheme
-          })
-        }
         try {
-          if (functionType === 'flowchart' || functionType === 'sequence') {
-            const diagram = render.parse(code)
-            target.innerHTML = ''
-            diagram.drawSVG(target, options)
-          } else if (functionType === 'plantuml') {
-            const diagram = render.parse(code, this.muya.options.plantumlServer)
-            target.innerHTML = ''
-            diagram.insertImgElement(target)
-          } else if (functionType === 'vega-lite') {
-            await render(key, JSON.parse(code), options)
+          const result = await renderDiagram({
+            type: functionType,
+            code,
+            target,
+            mermaidTheme: this.muya.options.mermaidTheme,
+            vegaTheme: this.muya.options.vegaTheme,
+            sequenceTheme: this.muya.options.sequenceTheme,
+            plantumlServer: this.muya.options.plantumlServer,
+            isCurrent: () => version === this.diagramRenderVersion
+          })
+          if (result.commit) {
+            result.commit()
           }
         } catch (err) {
           target.innerHTML = `< Invalid ${functionType === 'flowchart' ? 'Flow Chart' : 'Sequence'} Codes >`
@@ -188,8 +180,9 @@ class StateRender {
     const oldVdom = toVNode(rootDom)
 
     patch(oldVdom, newVdom)
-    this.renderMermaid()
-    this.renderDiagram()
+    const version = ++this.diagramRenderVersion
+    this.renderMermaid(version)
+    this.renderDiagram(version)
     this.codeCache.clear()
   }
 
@@ -243,8 +236,9 @@ class StateRender {
       }
     }
 
-    this.renderMermaid()
-    this.renderDiagram()
+    const version = ++this.diagramRenderVersion
+    this.renderMermaid(version)
+    this.renderDiagram(version)
     this.codeCache.clear()
   }
 
@@ -262,8 +256,9 @@ class StateRender {
     const rootDom = document.querySelector(selector)
     const oldVdom = toVNode(rootDom)
     patch(oldVdom, newVdom)
-    this.renderMermaid()
-    this.renderDiagram()
+    const version = ++this.diagramRenderVersion
+    this.renderMermaid(version)
+    this.renderDiagram(version)
     this.codeCache.clear()
   }
 

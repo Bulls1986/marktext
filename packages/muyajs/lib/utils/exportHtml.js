@@ -2,15 +2,14 @@ import marked from '../parser/marked'
 import Prism from 'prismjs'
 import katex from 'katex'
 import 'katex/dist/contrib/mhchem.min.js'
-import loadRenderer from '../renderers'
-import { renderMermaid as renderMermaidSvg } from '../renderers/mermaid.js'
+import { renderDiagram } from '../renderers/diagram.js'
 import githubMarkdownCss from 'github-markdown-css/github-markdown.css?inline'
 import exportStyle from '../assets/styles/exportStyle.css?inline'
 import highlightCss from 'prismjs/themes/prism.css?inline'
 import katexCss from 'katex/dist/katex.css?inline'
 import footerHeaderCss from '../assets/styles/headerFooterStyle.css?inline'
 import { EXPORT_DOMPURIFY_CONFIG } from '../config'
-import { sanitize, unescapeHTML } from '../utils'
+import { sanitize } from '../utils'
 import { validEmoji } from '../ui/emojis'
 
 export const getSanitizeHtml = (markdown, options) => {
@@ -26,6 +25,7 @@ class ExportHtml {
     this.muya = muya
     this.exportContainer = null
     this.mathRendererCalled = false
+    this.diagramDisposers = []
   }
 
   async renderMermaid() {
@@ -40,8 +40,16 @@ class ExportHtml {
     }
     for (const { node, source } of diagrams) {
       try {
-        const { svg, bindFunctions } = await renderMermaidSvg(source, 'default')
-        node.innerHTML = svg
+        const { svg, bindFunctions } = await renderDiagram({
+          type: 'mermaid',
+          code: source,
+          target: node,
+          mermaidTheme: 'default',
+          vegaTheme: 'latimes',
+          sequenceTheme: this.muya ? this.muya.options.sequenceTheme : 'hand',
+          plantumlServer: this.muya ? this.muya.options.plantumlServer : undefined
+        })
+        node.innerHTML = svg || ''
         if (bindFunctions) {
           bindFunctions(node)
         }
@@ -54,56 +62,38 @@ class ExportHtml {
   async renderDiagram() {
     const selector =
       'code.language-vega-lite, code.language-flowchart, code.language-sequence, code.language-plantuml'
-    const RENDER_MAP = {
-      flowchart: await loadRenderer('flowchart'),
-      sequence: await loadRenderer('sequence'),
-      plantuml: await loadRenderer('plantuml'),
-      'vega-lite': await loadRenderer('vega-lite')
-    }
     const codes = this.exportContainer.querySelectorAll(selector)
     for (const code of codes) {
-      const rawCode = unescapeHTML(code.innerHTML)
+      const rawCode = code.textContent || ''
       const functionType = (() => {
-        if (/sequence/.test(code.className)) {
+        if (code.classList.contains('language-sequence')) {
           return 'sequence'
-        } else if (/plantuml/.test(code.className)) {
+        } else if (code.classList.contains('language-plantuml')) {
           return 'plantuml'
-        } else if (/flowchart/.test(code.className)) {
+        } else if (code.classList.contains('language-flowchart')) {
           return 'flowchart'
         } else {
           return 'vega-lite'
         }
       })()
-      const render = RENDER_MAP[functionType]
       const preParent = code.parentNode
       const diagramContainer = document.createElement('div')
       diagramContainer.classList.add(functionType)
       preParent.replaceWith(diagramContainer)
-      const options = {}
-      if (functionType === 'sequence') {
-        Object.assign(options, { theme: this.muya.options.sequenceTheme })
-      } else if (functionType === 'vega-lite') {
-        Object.assign(options, {
-          actions: false,
-          tooltip: false,
-          renderer: 'svg',
-          theme: 'latimes' // only render light theme
-        })
-      }
       try {
-        if (functionType === 'flowchart' || functionType === 'sequence') {
-          const diagram = render.parse(rawCode)
-          diagramContainer.innerHTML = ''
-          diagram.drawSVG(diagramContainer, options)
+        const result = await renderDiagram({
+          type: functionType,
+          code: rawCode,
+          target: diagramContainer,
+          mermaidTheme: 'default',
+          vegaTheme: 'latimes',
+          sequenceTheme: this.muya ? this.muya.options.sequenceTheme : 'hand',
+          plantumlServer: this.muya ? this.muya.options.plantumlServer : undefined
+        })
+        if (result.commit) {
+          result.commit()
         }
-        if (functionType === 'plantuml') {
-          const diagram = render.parse(rawCode, this.muya ? this.muya.options.plantumlServer : undefined)
-          diagramContainer.innerHTML = ''
-          diagram.insertImgElement(diagramContainer)
-        }
-        if (functionType === 'vega-lite') {
-          await render(diagramContainer, JSON.parse(rawCode), options)
-        }
+        this.diagramDisposers.push(result.dispose)
       } catch (err) {
         diagramContainer.innerHTML = '< Invalid Diagram >'
       }
@@ -178,6 +168,10 @@ class ExportHtml {
     await this.renderMermaid()
     await this.renderDiagram()
     let result = exportContainer.innerHTML
+    for (const dispose of this.diagramDisposers) {
+      dispose()
+    }
+    this.diagramDisposers = []
     exportContainer.remove()
 
     // hack to add arrow marker to output html

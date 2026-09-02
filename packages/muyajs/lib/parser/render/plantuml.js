@@ -1,5 +1,4 @@
 import { deflate } from 'pako'
-import { toHTML, h } from './snabbdom'
 
 const PLANTUML_DEFAULT_URL = 'https://www.plantuml.com/plantuml'
 
@@ -56,7 +55,9 @@ export default class Diagram {
       throw new Error('Invalid container: ' + container)
     }
     const src = `${this.plantumlServer}/svg/~1${this.encodedInput}`
-    const node = h('img', { attrs: { src } })
-    div.innerHTML = toHTML(node)
+    const image = document.createElement('img')
+    image.src = src
+    image.alt = 'PlantUML diagram'
+    div.replaceChildren(image)
   }
 }

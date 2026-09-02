@@ -33,6 +33,13 @@ const registeredMermaidInstances = new WeakSet<object>();
 let renderId = 0;
 let renderQueue: Promise<void> = Promise.resolve();
 
+/** Preserve diagram whitespace while making pasted files' line endings stable. */
+export function normalizeMermaidSource(source: string): string {
+    return source
+        .replace(/^\uFEFF/, '')
+        .replace(/\r\n?/g, '\n');
+}
+
 function registerMermaidIconPacks(mermaid: Mermaid) {
     if (registeredMermaidInstances.has(mermaid))
         return;
@@ -75,6 +82,7 @@ export function renderMermaid(
     theme: string,
 ): Promise<MermaidRenderResult> {
     return enqueueMermaidRender(async () => {
+        const source = normalizeMermaidSource(code);
         const mermaid = (await loadRenderer('mermaid')) as Mermaid;
         registerMermaidIconPacks(mermaid);
         mermaid.initialize({
@@ -83,7 +91,7 @@ export function renderMermaid(
             theme: theme as MermaidConfig['theme'],
         });
 
-        const { svg, bindFunctions } = await mermaid.render(getNextRenderId(), code);
+        const { svg, bindFunctions } = await mermaid.render(getNextRenderId(), source);
         return { svg, bindFunctions };
     });
 }

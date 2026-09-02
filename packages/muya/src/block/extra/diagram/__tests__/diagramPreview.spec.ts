@@ -10,9 +10,9 @@ import DiagramPreview from '../diagramPreview';
 
 // The diagram renderer (`utils/diagram` default export) dynamically imports
 // heavy renderer packages (mermaid / vega / flowchart) that don't load under
-// happy-dom. We mock it so:
-//   - the "valid" path never runs (we only characterize empty + error states),
-//   - the "invalid" path can throw a controlled message we assert is sanitized.
+// happy-dom. We mock the loader so valid Mermaid rendering can still exercise
+// the real preview -> adapter -> Mermaid API path, while invalid diagrams can
+// throw a controlled message we assert is sanitized.
 const loadRendererMock = vi.fn();
 vi.mock('../../../../utils/diagram', () => ({
     default: (...args: unknown[]) => loadRendererMock(...args),
@@ -21,6 +21,7 @@ vi.mock('../../../../utils/diagram', () => ({
 const bootedHosts: HTMLElement[] = [];
 
 afterEach(() => {
+    vi.useRealTimers();
     while (bootedHosts.length) bootedHosts.pop()!.remove();
     loadRendererMock.mockReset();
 });
@@ -116,6 +117,76 @@ describe('diagramPreview — invalid / error state', () => {
     });
 });
 
+describe('diagramPreview — Mermaid auto-rendering', () => {
+    it('commits the SVG returned by Mermaid after the async preview update', async () => {
+        const render = vi.fn().mockResolvedValue({
+            svg: '<svg data-rendered="mermaid"></svg>',
+            bindFunctions: vi.fn(),
+        });
+        loadRendererMock.mockResolvedValue({
+            initialize: vi.fn(),
+            registerIconPacks: vi.fn(),
+            render,
+        });
+
+        const { preview } = makePreview('graph TD\n  A --> B');
+        await preview.update('graph TD\n  A --> B');
+
+        expect(render).toHaveBeenCalledWith(
+            expect.any(String),
+            'graph TD\n  A --> B',
+        );
+        expect(
+            preview.domNode!.querySelector('[data-rendered="mermaid"]'),
+        ).not.toBeNull();
+    });
+
+    it('debounces rapid source changes and renders only the latest source', async () => {
+        vi.useFakeTimers();
+        const render = vi.fn().mockResolvedValue({
+            svg: '<svg data-rendered="latest"></svg>',
+        });
+        loadRendererMock.mockResolvedValue({
+            initialize: vi.fn(),
+            registerIconPacks: vi.fn(),
+            render,
+        });
+
+        const { preview } = makePreview('graph TD\n  A --> B');
+        const first = preview.update('graph TD\n  A --> B');
+        const latest = preview.update('graph TD\n  A --> B --> C');
+
+        await vi.advanceTimersByTimeAsync(199);
+        expect(render).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+        await latest;
+        await first;
+
+        expect(render).toHaveBeenCalledTimes(1);
+        expect(render.mock.calls[0][1]).toBe('graph TD\n  A --> B --> C');
+    });
+
+    it('keeps the last valid SVG when a later edit is temporarily invalid', async () => {
+        const render = vi.fn()
+            .mockResolvedValueOnce({ svg: '<svg data-rendered="valid"></svg>' })
+            .mockRejectedValueOnce(new Error('Parse error'));
+        loadRendererMock.mockResolvedValue({
+            initialize: vi.fn(),
+            registerIconPacks: vi.fn(),
+            render,
+        });
+
+        const { preview } = makePreview('graph TD\n  A --> B');
+        await preview.update('graph TD\n  A --> B');
+        await preview.update('graph TD\n  A -->');
+
+        expect(
+            preview.domNode!.querySelector('[data-rendered="valid"]'),
+        ).not.toBeNull();
+        expect(preview.domNode!.getAttribute('data-diagram-error')).toBe('Parse error');
+    });
+});
+
 describe('diagramPreview — clickHandler routing', () => {
     it('preventDefault + stopPropagation + setCursor(0,0) on the parent first content', () => {
         const { preview } = makePreview('');
@@ -180,7 +251,9 @@ describe('diagramPreview — renderer theme pass-through', () => {
     // The constructor fires update() unawaited, so assert on lastCall — our
     // explicit update() (after mutating the option) is always the latest.
     it('passes sequenceTheme into the sequence renderer drawSVG options (simple)', async () => {
-        const drawSVG = vi.fn();
+        const drawSVG = vi.fn((target: HTMLElement, _options?: object) => {
+            target.innerHTML = '<svg width="320" height="240"></svg>';
+        });
         loadRendererMock.mockResolvedValue({ parse: () => ({ drawSVG }) });
 
         const { preview, muya } = makePreview('Alice->Bob: Hi', 'sequence');
@@ -192,7 +265,9 @@ describe('diagramPreview — renderer theme pass-through', () => {
     });
 
     it('defaults sequenceTheme to the muya option value (hand) when unchanged', async () => {
-        const drawSVG = vi.fn();
+        const drawSVG = vi.fn((target: HTMLElement, _options?: object) => {
+            target.innerHTML = '<svg width="320" height="240"></svg>';
+        });
         loadRendererMock.mockResolvedValue({ parse: () => ({ drawSVG }) });
 
         const { preview } = makePreview('Alice->Bob: Hi', 'sequence');

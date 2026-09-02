@@ -39,7 +39,9 @@ export default class Diagram {
             throw new Error(`Invalid container: ${container}`);
 
         const src = `${this.plantumlServer}/svg/${this.encodedInput}`;
-
-        div.innerHTML = `<img src="${src}" >`;
+        const image = document.createElement('img');
+        image.src = src;
+        image.alt = 'PlantUML diagram';
+        div.replaceChildren(image);
     }
 }

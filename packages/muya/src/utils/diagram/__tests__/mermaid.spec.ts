@@ -47,4 +47,22 @@ describe('renderMermaid', () => {
         expect(ids[0]).toMatch(/^muya-mermaid-\d+$/);
         expect(new Set(ids).size).toBe(2);
     });
+
+    it('passes Mermaid frontmatter configuration through without rewriting it', async () => {
+        render.mockClear();
+        const source = [
+            '---',
+            'config:',
+            '  theme: dark',
+            '  flowchart:',
+            '    curve: basis',
+            '---',
+            'flowchart LR',
+            '  A --> B',
+        ].join('\n');
+
+        await renderMermaid(source, 'default');
+
+        expect(render.mock.calls[0][1]).toBe(source);
+    });
 });
