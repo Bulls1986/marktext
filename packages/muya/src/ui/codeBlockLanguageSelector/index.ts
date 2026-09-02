@@ -3,6 +3,7 @@ import type LangInputContent from '../../block/content/langInputContent';
 import type ParagraphContent from '../../block/content/paragraphContent';
 import type { Muya } from '../../index';
 import { ScrollPage } from '../../block/scrollPage';
+import { getDiagramType } from '../../utils/diagram/languages';
 import { search } from '../../utils/prism';
 
 import { h, patch } from '../../utils/snabbdom';
@@ -21,8 +22,6 @@ const defaultOptions = {
     showArrow: false,
 };
 
-const DIAGRAM_LANGS = new Set(['mermaid', 'vega-lite', 'plantuml', 'flowchart', 'sequence']);
-
 // The language the user actually typed after the ``` fence. The selector's
 // fuzzy search may resolve a non-code language (e.g. `vega-lite`) to an
 // unrelated Prism language, so the diagram check keys off this raw text.
@@ -38,10 +37,11 @@ function newBlockStateForLang(typedLang: string, matchedLang: string, isGitlabMa
     if (isGitlabMath)
         return { name: 'math-block', meta: { mathStyle: 'gitlab' }, text: '' };
 
-    if (DIAGRAM_LANGS.has(typedLang)) {
+    const diagramType = getDiagramType(typedLang);
+    if (diagramType) {
         return {
             name: 'diagram',
-            meta: { type: typedLang, lang: typedLang === 'vega-lite' ? 'json' : 'yaml' },
+            meta: { type: diagramType, lang: diagramType === 'vega-lite' ? 'json' : 'yaml' },
             text: '',
         };
     }
@@ -201,11 +201,16 @@ export class CodeBlockLanguageSelector extends BaseScrollFloat {
             codeContent?.setCursor(0, 0);
         }
         else {
-            const codeBlock = block.parent!;
-            block.text = name;
-            block.update();
-            codeBlock.lang = name;
-            codeBlock.lastContentInDescendant()?.setCursor(0, 0);
+            if (typeof block.updateLanguage === 'function') {
+                block.updateLanguage(name);
+            }
+            else {
+                const codeBlock = block.parent!;
+                block.text = name;
+                block.update();
+                codeBlock.lang = name;
+                codeBlock.lastContentInDescendant()?.setCursor(0, 0);
+            }
         }
 
         super.selectItem(item);

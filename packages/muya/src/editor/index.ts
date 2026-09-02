@@ -190,7 +190,7 @@ function drop(root: BlockNode, descent: JSONOpList, muya: Muya): BlockNode {
         else if (sd.blockName === 'language-input') {
             sd._text = otText.type.apply(sd.text ?? '', es) as string;
             if (sd.parent?.meta)
-                sd.parent.meta.lang = sd.text;
+                sd.parent.meta[sd.parent.blockName === 'diagram-container' ? 'type' : 'lang'] = sd.text;
             sd.update?.();
         }
         else if (sd.blockName === 'code-block') {

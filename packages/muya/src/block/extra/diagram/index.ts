@@ -87,14 +87,21 @@ class DiagramBlock extends Parent {
     }
 
     queryBlock(path: TBlockPath) {
-        return path.length && path[0] === 'text'
-            ? this.firstContentInDescendant()
-            : this;
+        if (!path.length)
+            return this;
+        if (path[0] === 'meta')
+            return this;
+        if (path[0] === 'type')
+            return this.firstContentInDescendant();
+        if (path[0] === 'text')
+            return this.lastContentInDescendant();
+
+        return this;
     }
 
     override getState(): IDiagramState {
         const { meta } = this;
-        const text = this.firstContentInDescendant()?.text;
+        const text = this.lastContentInDescendant()?.text;
 
         if (text == null)
             throw new Error('text is null when getState in diagram block.');

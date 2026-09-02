@@ -370,7 +370,10 @@ class Content extends TreeNode {
         const { path } = this;
         if (this.blockName === 'language-input') {
             path.pop();
-            path.push('meta', 'lang');
+            path.push(
+                'meta',
+                this.parent?.blockName === 'diagram-container' ? 'type' : 'lang',
+            );
         }
 
         // dispatch change to modify json state

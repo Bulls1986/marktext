@@ -380,20 +380,26 @@ span.mu-language-input {
     opacity: 0;
 }
 
-.mu-code-block.mu-active .mu-language-input {
+.mu-code-block.mu-active .mu-language-input,
+figure.mu-diagram-block.mu-active .mu-language-input {
     top: -1.8em;
     z-index: initial;
 
     opacity: 1;
 }
 
-.mu-code-block.mu-active .mu-language-input:empty::after {
+.mu-code-block.mu-active .mu-language-input:empty::after,
+figure.mu-diagram-block.mu-active .mu-language-input:empty::after {
     color: var(--editor-color-10);
 
     content: attr(hint);
 }
 
 .mu-code-block.mu-fenced-code.mu-active .mu-language-input {
+    left: 20px;
+}
+
+figure.mu-diagram-block.mu-active .mu-language-input {
     left: 20px;
 }
 

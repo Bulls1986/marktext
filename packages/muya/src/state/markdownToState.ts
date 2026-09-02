@@ -11,6 +11,7 @@ import type {
     TState,
 } from './types';
 import { firstWordOfInfo } from '../utils';
+import { getDiagramType } from '../utils/diagram/languages';
 import logger from '../utils/logger';
 import { lexBlock } from '../utils/marked';
 
@@ -430,9 +431,8 @@ export class MarkdownToState {
             value = value.replace(/\n+$/, '').replace(/^\n+/, '');
         }
 
-        const diagramMatch = /^(mermaid|vega-lite|plantuml|flowchart|sequence)$/.exec(lang);
-        if (diagramMatch) {
-            const diagramType = diagramMatch[1] as 'mermaid' | 'vega-lite' | 'plantuml' | 'flowchart' | 'sequence';
+        const diagramType = getDiagramType(lang);
+        if (diagramType) {
             return {
                 name: 'diagram' as const,
                 text: value,

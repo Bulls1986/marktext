@@ -4,7 +4,6 @@ import type { IRenderCursor } from '../../../selection/types';
 import type {
     IBlockQuoteState,
     IBulletListState,
-    IDiagramMeta,
     IListItemState,
     IOrderListState,
     IParagraphState,
@@ -20,6 +19,7 @@ import { HTML_TAGS, VOID_HTML_TAGS } from '../../../config';
 import { tokenizer } from '../../../inlineRenderer/lexer';
 import { isListItemState, isTaskListItemState } from '../../../state/types';
 import { isKeyboardEvent, isLengthEven } from '../../../utils';
+import { getDiagramType } from '../../../utils/diagram/languages';
 import logger from '../../../utils/logger';
 import Format from '../../base/format';
 import OrderList from '../../commonMark/orderList';
@@ -284,9 +284,8 @@ class ParagraphContent extends Format {
                 // Diagram fences (```mermaid etc.) become diagram blocks,
                 // mirroring the file-load path in markdownToState; everything
                 // else is a fenced code block.
-                const diagramMatch = /^(?:mermaid|vega-lite|plantuml|flowchart|sequence)$/.exec(lang);
-                if (diagramMatch) {
-                    const type = lang as IDiagramMeta['type'];
+                const type = getDiagramType(lang);
+                if (type) {
                     const state = {
                         name: 'diagram',
                         text: '',
@@ -302,7 +301,7 @@ class ParagraphContent extends Format {
 
                     this.parent!.replaceWith(diagramBlock);
 
-                    diagramBlock.firstContentInDescendant().setCursor(0, 0, true);
+                    diagramBlock.lastContentInDescendant().setCursor(0, 0, true);
                 }
                 else {
                     const state = {

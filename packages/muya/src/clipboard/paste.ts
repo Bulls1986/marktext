@@ -482,11 +482,16 @@ function applyLiteralPaste(
                 + firstLine
                 + content.substring(end.offset);
         const offset = start.offset + firstLine.length;
+        let nextBlock = anchorBlock;
         if (anchorBlock instanceof LangInputContent)
-            anchorBlock.updateLanguage(newLang);
+            nextBlock = anchorBlock.updateLanguage(newLang);
         else
             anchorBlock.text = newLang;
-        anchorBlock.setCursor(offset, offset, true);
+        // A supported diagram language replaces the whole code block. The old
+        // language input is detached in that case, so never put the selection
+        // back into it; updateLanguage already focuses the replacement source.
+        if (nextBlock === anchorBlock)
+            nextBlock.setCursor(offset, offset, true);
 
         return;
     }

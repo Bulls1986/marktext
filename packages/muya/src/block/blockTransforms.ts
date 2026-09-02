@@ -1,10 +1,12 @@
 import type { Muya } from '../muya';
-import type { IFrontmatterMeta } from '../state/types';
+import type { ICodeBlockState, IDiagramState, IFrontmatterMeta } from '../state/types';
+import type { DiagramType } from '../utils/diagram/languages';
 import type Parent from './base/parent';
 import emptyStates from '../config/emptyStates';
 import { getCursorReference } from '../selection';
 import { isParagraphState } from '../state/types';
 import { deepClone } from '../utils';
+import { getDiagramType } from '../utils/diagram/languages';
 import logger from '../utils/logger';
 import { ScrollPage } from './scrollPage';
 
@@ -56,6 +58,46 @@ export function insertFrontMatterAtStart(muya: Muya): boolean {
     frontmatter.firstContentInDescendant()?.setCursor(0, 0, true);
 
     return true;
+}
+
+function isConvertibleDiagramHost(block: Parent) {
+    return block.blockName === 'code-block' || block.blockName === 'diagram';
+}
+
+/** Replace a code/diagram host while preserving its source text. */
+export function replaceBlockWithDiagram(block: Parent, type: DiagramType): Parent | null {
+    if (!block.parent || !isConvertibleDiagramHost(block))
+        return null;
+
+    const state: IDiagramState = {
+        name: 'diagram',
+        text: block.lastContentInDescendant()?.text ?? '',
+        meta: {
+            type,
+            lang: type === 'vega-lite' ? 'json' : 'yaml',
+        },
+    };
+    const newBlock = ScrollPage.loadBlock('diagram').create(block.muya, state);
+
+    return block.replaceWith(newBlock) ?? null;
+}
+
+/** Return a diagram to a normal fenced code block when its type is cleared. */
+export function replaceBlockWithCode(block: Parent, lang: string): Parent | null {
+    if (!block.parent || block.blockName !== 'diagram')
+        return null;
+
+    const state: ICodeBlockState = {
+        name: 'code-block',
+        text: block.lastContentInDescendant()?.text ?? '',
+        meta: {
+            type: 'fenced',
+            lang,
+        },
+    };
+    const newBlock = ScrollPage.loadBlock('code-block').create(block.muya, state);
+
+    return block.replaceWith(newBlock) ?? null;
 }
 
 /**
@@ -146,15 +188,10 @@ function buildDiagramBlock(label: string, muya: Muya) {
     const diagramState = deepClone(emptyStates.diagram);
 
     const [name, type] = label.split(' ');
-    if (
-        type === 'mermaid'
-        || type === 'plantuml'
-        || type === 'vega-lite'
-        || type === 'flowchart'
-        || type === 'sequence'
-    ) {
-        diagramState.meta.type = type;
-        diagramState.meta.lang = type === 'vega-lite' ? 'json' : 'yaml';
+    const diagramType = getDiagramType(type);
+    if (diagramType) {
+        diagramState.meta.type = diagramType;
+        diagramState.meta.lang = diagramType === 'vega-lite' ? 'json' : 'yaml';
     }
 
     return ScrollPage.loadBlock(name).create(muya, diagramState);
@@ -259,7 +296,9 @@ function finishInsertedBlock(newBlock: Parent, muya: Muya, label: string) {
 // Move the caret into a freshly-built block: between <div>\n\n</div> for an
 // html-block, otherwise to the end of its text.
 function placeCaretInNewBlock(newBlock: Parent, label: string) {
-    const cursorBlock = newBlock.firstContentInDescendant();
+    const cursorBlock = label.startsWith('diagram ')
+        ? newBlock.lastContentInDescendant()
+        : newBlock.firstContentInDescendant();
     if (!cursorBlock)
         return;
 

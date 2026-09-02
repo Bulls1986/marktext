@@ -120,7 +120,11 @@ class DiagramPreview extends Parent {
         if (this.parent == null)
             return;
 
-        const cursorBlock = this.parent.firstContentInDescendant();
+        // The diagram container starts with its language input, so clicking a
+        // settled preview must enter the source editor rather than the type
+        // field. Keep the fallback for lightweight legacy test/mount hosts.
+        const cursorBlock = this.parent.lastContentInDescendant?.()
+            ?? this.parent.firstContentInDescendant();
         cursorBlock?.setCursor(0, 0);
     }
 
