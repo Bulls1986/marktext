@@ -89,6 +89,11 @@ test.describe('mermaid diagram', () => {
         await expect(error).toContainText('Invalid Diagram Code');
 
         await expect(page.locator(`${editor.diagramPreview} svg`)).toHaveCount(0);
+        // Mermaid's built-in error renderer uses a body-level temporary SVG.
+        // It must be removed before the preview surfaces its local error, or
+        // the 2412px-wide diagnostic can cover the editor sidebars.
+        await expect(page.locator('body > [id^="dmuya-mermaid-"]'))
+            .toHaveCount(0);
 
         // The editor stays alive (no thrown crash): the source still round-trips.
         const md = await page.evaluate(() => window.muya!.getMarkdown());

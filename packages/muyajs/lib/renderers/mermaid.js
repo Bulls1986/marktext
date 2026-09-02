@@ -47,6 +47,22 @@ function getNextRenderId() {
   return id
 }
 
+// Mermaid creates a temporary `d${id}` wrapper in `document.body` while it
+// renders. Its built-in error renderer leaves that wrapper behind when the
+// parse/draw promise rejects, which would paint a 2412px-wide error SVG over
+// the editor and its sidebars. Remove every temporary form in both success
+// and failure paths; the caller only needs the serialized SVG string.
+function cleanupMermaidRenderNodes(id) {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const nodeIds = [id, `d${id}`, `i${id}`]
+  nodeIds.forEach(nodeId => {
+    document.getElementById(nodeId)?.remove()
+  })
+}
+
 // Mermaid's configuration is global. Queue initialization and rendering so
 // concurrent previews/exports cannot change the theme or ID state mid-render.
 export function renderMermaid(code, theme) {
@@ -59,8 +75,13 @@ export function renderMermaid(code, theme) {
       theme
     })
 
-    const { svg, bindFunctions } = await mermaid.render(getNextRenderId(), code)
-    return { svg, bindFunctions }
+    const id = getNextRenderId()
+    try {
+      const { svg, bindFunctions } = await mermaid.render(id, code)
+      return { svg, bindFunctions }
+    } finally {
+      cleanupMermaidRenderNodes(id)
+    }
   })
   renderQueue = next.then(
     () => undefined,

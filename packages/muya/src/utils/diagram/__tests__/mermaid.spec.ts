@@ -65,4 +65,22 @@ describe('renderMermaid', () => {
 
         expect(render.mock.calls[0][1]).toBe(source);
     });
+
+    it('cleans Mermaid temporary error-rendering nodes after a rejected render', async () => {
+        let renderId = '';
+        render.mockImplementation(async (id: string) => {
+            renderId = id;
+            const leakedErrorWrapper = document.createElement('div');
+            leakedErrorWrapper.id = `d${id}`;
+            document.body.append(leakedErrorWrapper);
+            throw new Error('Syntax error in text');
+        });
+
+        await expect(
+            renderMermaid('graph TD\n  A--->', 'default'),
+        ).rejects.toThrow('Syntax error in text');
+
+        expect(renderId).toMatch(/^muya-mermaid-\d+$/);
+        expect(document.getElementById(`d${renderId}`)).toBeNull();
+    });
 });
