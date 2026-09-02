@@ -19,6 +19,7 @@ export interface IUserPreferences {
   startUpAction?: string
   defaultDirectoryToOpen?: string
   language?: string
+  shortcutStyle?: ShortcutStyle
   editorFontFamily?: string
   fontSize?: number
   lineHeight?: number
@@ -70,6 +71,8 @@ export interface IUserPreferences {
   treePathExcludePatterns?: string[]
   [key: string]: unknown
 }
+
+export type ShortcutStyle = 'marktext' | 'typora'
 
 export interface LayoutState {
   rightColumn: 'files' | 'search' | 'toc'

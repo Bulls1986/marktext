@@ -13,6 +13,13 @@ import keybindingsLinux from './keybindingsLinux'
 import keybindingsWindows from './keybindingsWindows'
 import type { CommandManager } from '../commands'
 import type { AppEnvironment } from '../app/env'
+import type { ShortcutStyle } from '@shared/types/preferences'
+import {
+  applyShortcutStyle,
+  DEFAULT_SHORTCUT_STYLE,
+  normalizeShortcutStyle,
+  type ShortcutPlatform
+} from './shortcutStyles'
 
 type ShortcutCallback = (win: BrowserWindow) => void
 
@@ -21,15 +28,21 @@ class Keybindings {
   commandManager: CommandManager
   userKeybindings: Map<string, string>
   keys: Map<string, string>
+  shortcutStyle: ShortcutStyle
 
   /**
    * @param commandManager The command manager instance.
    * @param appEnvironment The application environment instance.
    */
-  constructor(commandManager: CommandManager, appEnvironment: AppEnvironment) {
+  constructor(
+    commandManager: CommandManager,
+    appEnvironment: AppEnvironment,
+    shortcutStyle: unknown = DEFAULT_SHORTCUT_STYLE
+  ) {
     const { userDataPath } = appEnvironment.paths
     this.configPath = path.join(userDataPath, 'keybindings.json')
     this.commandManager = commandManager
+    this.shortcutStyle = normalizeShortcutStyle(shortcutStyle)
 
     this.userKeybindings = new Map()
     this.keys = this.getDefaultKeybindings()
@@ -95,6 +108,33 @@ class Keybindings {
   }
 
   getDefaultKeybindings(): Map<string, string> {
+    const platformKeybindings = this.getPlatformKeybindings()
+    const platform: ShortcutPlatform = isOsx ? 'darwin' : isLinux ? 'linux' : 'win32'
+    return applyShortcutStyle(platformKeybindings, this.shortcutStyle, platform)
+  }
+
+  getShortcutStyle(): ShortcutStyle {
+    return this.shortcutStyle
+  }
+
+  /**
+   * Changes the active preset without touching the user's custom map.
+   *
+   * The caller is responsible for persisting the preference; this method only
+   * rebuilds the active map and re-registers shortcuts on open windows.
+   */
+  setShortcutStyle(style: unknown, windows: BrowserWindow[] = []): boolean {
+    const nextStyle = normalizeShortcutStyle(style)
+    if (nextStyle === this.shortcutStyle) {
+      return false
+    }
+
+    this.shortcutStyle = nextStyle
+    this._reloadKeybindings(windows)
+    return true
+  }
+
+  private getPlatformKeybindings(): Map<string, string> {
     if (isOsx) {
       return keybindingsDarwin
     } else if (isLinux) {

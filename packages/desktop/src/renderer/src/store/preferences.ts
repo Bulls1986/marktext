@@ -18,6 +18,7 @@ export type ImageInsertAction = 'folder' | 'path' | 'upload'
 export type ImageRelativeDirectoryBase = 'file' | 'root'
 export type FileSortBy = 'created' | 'modified' | 'title'
 export type FileSortOrder = 'asc' | 'desc'
+export type ShortcutStyle = 'marktext' | 'typora'
 
 export interface PreferencesState {
   // ----- General -----
@@ -37,6 +38,7 @@ export interface PreferencesState {
   lastOpenedFolder: string
   treePathExcludePatterns: string[]
   language: string
+  shortcutStyle: ShortcutStyle | string
 
   // ----- Editor / typography -----
   editorFontFamily: string
@@ -155,6 +157,7 @@ export const usePreferencesStore = defineStore('preferences', {
     lastOpenedFolder: '',
     treePathExcludePatterns: [],
     language: 'en',
+    shortcutStyle: 'marktext',
 
     editorFontFamily: 'Open Sans',
     fontSize: 16,

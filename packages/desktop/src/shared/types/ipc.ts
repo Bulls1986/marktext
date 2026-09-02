@@ -32,6 +32,13 @@ import type {
 } from './files'
 import type { BufferedState as BufferedStateType } from './bufferedState'
 import type { MenuTemplate, MenuPopupPosition } from './menu'
+import type { ShortcutStyle } from './preferences'
+
+export interface KeybindingPreferences {
+  defaultKeybindings: Map<string, string>
+  userKeybindings: Map<string, string>
+  shortcutStyle: ShortcutStyle
+}
 
 // =================================================================
 // Invoke channels (renderer → main, returns Promise<T>)
@@ -65,8 +72,9 @@ export interface IpcInvokeChannels {
   'mt::keybinding-get-keyboard-info': { args: []; ret: KeyboardInfo }
   'mt::keybinding-get-pref-keybindings': {
     args: []
-    ret: { defaultKeybindings: Map<string, string>; userKeybindings: Map<string, string> }
+    ret: KeybindingPreferences
   }
+  'mt::keybinding-set-style': { args: [style: ShortcutStyle]; ret: KeybindingPreferences }
   'mt::keybinding-save-user-keybindings': { args: [bindings: unknown]; ret: boolean }
   'mt::paths::is-image': { args: [path: string]; ret: boolean }
   'mt::rg::start': { args: [req: unknown]; ret: { searchId: string } }

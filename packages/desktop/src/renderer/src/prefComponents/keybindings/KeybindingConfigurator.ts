@@ -1,6 +1,7 @@
 import { isEqualAccelerator } from 'common/keybinding'
 import getCommandDescriptionById from '@/commands/descriptions'
 import { isOsx } from '@/util'
+import type { ShortcutStyle } from '@shared/types/preferences'
 
 const SHORTCUT_TYPE_DEFAULT = 0
 const SHORTCUT_TYPE_USER = 1
@@ -26,12 +27,18 @@ export default class KeybindingConfigurator {
   defaultKeybindings: Map<string, string>
   keybindingList: UiKeybinding[]
   isDirty: boolean
+  shortcutStyle: ShortcutStyle
 
   /**
    * ctor
    */
-  constructor(defaultKeybindings: Map<string, string>, userKeybindings: Map<string, string>) {
+  constructor(
+    defaultKeybindings: Map<string, string>,
+    userKeybindings: Map<string, string>,
+    shortcutStyle: ShortcutStyle = 'marktext'
+  ) {
     this.defaultKeybindings = defaultKeybindings
+    this.shortcutStyle = shortcutStyle
     this.keybindingList = this._buildUiKeybindingList(defaultKeybindings, userKeybindings)
     this.isDirty = false
   }
@@ -74,6 +81,36 @@ export default class KeybindingConfigurator {
 
   getKeybindings(): UiKeybinding[] {
     return this.keybindingList
+  }
+
+  getShortcutStyle(): ShortcutStyle {
+    return this.shortcutStyle
+  }
+
+  /**
+   * Change the built-in shortcut preset while preserving all local custom
+   * entries, including unsaved edits in the table.
+   */
+  async setShortcutStyle(style: ShortcutStyle): Promise<boolean> {
+    if (style === this.shortcutStyle) {
+      return true
+    }
+
+    const userKeybindings = this._getUserKeybindingMap()
+    const wasDirty = this.isDirty
+    try {
+      const result = await window.electron.ipcRenderer.invoke('mt::keybinding-set-style', style)
+      this.defaultKeybindings = result.defaultKeybindings
+      this.shortcutStyle = result.shortcutStyle
+      this.keybindingList = this._buildUiKeybindingList(
+        this.defaultKeybindings,
+        userKeybindings
+      )
+      this.isDirty = wasDirty
+      return true
+    } catch {
+      return false
+    }
   }
 
   // Rebuild the keybinding list to update descriptions on language switch

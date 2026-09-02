@@ -14,6 +14,23 @@
           class="link-icon"
         /></a>.
       </div>
+      <div class="shortcut-style">
+        <div class="style-description">
+          {{ t('preferences.keybindings.styleDescription') }}
+        </div>
+        <el-radio-group
+          :model-value="shortcutStyle"
+          :disabled="styleChangeInProgress"
+          @change="handleShortcutStyleChange"
+        >
+          <el-radio label="marktext">
+            {{ t('preferences.keybindings.marktext') }}
+          </el-radio>
+          <el-radio label="typora">
+            {{ t('preferences.keybindings.typora') }}
+          </el-radio>
+        </el-radio-group>
+      </div>
       <el-table
         :data="keybindingList"
         style="width: 100%"
@@ -115,6 +132,7 @@ import Separator from '../common/separator/index.vue'
 import KeyInputDialog from './key-input-dialog.vue'
 import KeybindingConfigurator from './KeybindingConfigurator'
 import type { UiKeybinding } from './KeybindingConfigurator'
+import type { ShortcutStyle } from '@shared/types/preferences'
 import notice from '@/services/notification'
 import { Edit, RefreshRight, Delete } from '@element-plus/icons-vue'
 import LinkIcon from '@/components/icons/LinkIcon.vue'
@@ -126,6 +144,8 @@ const showDebugTools = ref<boolean>(false)
 const keybindingConfigurator = ref<KeybindingConfigurator | null>(null)
 const selectedShortcutId = ref<string | null>(null)
 const keybindingList = ref<UiKeybinding[]>([])
+const shortcutStyle = ref<ShortcutStyle>('marktext')
+const styleChangeInProgress = ref<boolean>(false)
 
 // Function to rebuild the keybinding list
 const rebuildKeybindingList = (): void => {
@@ -150,10 +170,15 @@ onMounted(() => {
 
   window.electron.ipcRenderer
     .invoke('mt::keybinding-get-pref-keybindings')
-    .then(({ defaultKeybindings, userKeybindings }) => {
-      const configurator = new KeybindingConfigurator(defaultKeybindings, userKeybindings)
+    .then(({ defaultKeybindings, userKeybindings, shortcutStyle: configuredStyle }) => {
+      const configurator = new KeybindingConfigurator(
+        defaultKeybindings,
+        userKeybindings,
+        configuredStyle
+      )
       keybindingConfigurator.value = configurator
       keybindingList.value = configurator.getKeybindings()
+      shortcutStyle.value = configurator.getShortcutStyle()
     })
     .catch((error) => log.error('Error while loading keyboard information for settings:', error))
 
@@ -204,6 +229,37 @@ const restoreDefaults = (): void => {
       }
     })
     .catch((error) => log.error(error))
+}
+
+const handleShortcutStyleChange = (value: string | number | boolean): void => {
+  const nextStyle: ShortcutStyle = value === 'typora' ? 'typora' : 'marktext'
+  const previousStyle = shortcutStyle.value
+  const configurator = keybindingConfigurator.value
+  if (!configurator || nextStyle === previousStyle) return
+
+  styleChangeInProgress.value = true
+  configurator
+    .setShortcutStyle(nextStyle)
+    .then((success) => {
+      if (success) {
+        shortcutStyle.value = configurator.getShortcutStyle()
+        keybindingList.value = configurator.getKeybindings()
+      } else {
+        shortcutStyle.value = previousStyle
+        notice.notify({
+          title: t('preferences.keybindings.failedToSave'),
+          type: 'error',
+          message: t('preferences.keybindings.saveError')
+        })
+      }
+    })
+    .catch((error) => {
+      shortcutStyle.value = previousStyle
+      log.error(error)
+    })
+    .finally(() => {
+      styleChangeInProgress.value = false
+    })
 }
 
 const handleEditClick = (index: number, entry: UiKeybinding | undefined): void => {
@@ -262,6 +318,16 @@ const dumpKeyboardInformation = (): void => {
   }
   & .keybindings > div.text {
     margin-bottom: 10px;
+  }
+  & .shortcut-style {
+    margin: 18px 0 24px;
+    & .style-description {
+      margin-bottom: 10px;
+    }
+    & .el-radio-group {
+      display: flex;
+      gap: 18px;
+    }
   }
   & .link {
     color: var(--themeColor);

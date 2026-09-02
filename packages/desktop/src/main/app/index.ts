@@ -7,11 +7,13 @@ import { app, BrowserWindow, clipboard, dialog, nativeTheme, shell, ipcMain } fr
 import type { BrowserWindowConstructorOptions } from 'electron'
 import { isChildOfDirectory } from 'common/filesystem/paths'
 import type { IUserPreferences } from '@shared/types/preferences'
+import type { KeybindingPreferences } from '@shared/types/ipc'
 import { isLinux, isOsx, isWindows } from '../config'
 import parseArgs from '../cli/parser'
 import { normalizeAndResolvePath } from '../filesystem'
 import { normalizeMarkdownPath } from '../filesystem/markdown'
 import { registerKeyboardListeners } from '../keyboard'
+import { normalizeShortcutStyle } from '../keyboard/shortcutStyles'
 import { selectTheme } from '../menu/actions/theme'
 import { dockMenu } from '../menu/templates'
 import registerSpellcheckerListeners from '../spellchecker'
@@ -288,6 +290,10 @@ class App {
     onInternalChannel(
       'broadcast-preferences-changed',
       (change: Partial<IUserPreferences>) => {
+        if (change.shortcutStyle !== undefined) {
+          this._applyShortcutStyle(change.shortcutStyle)
+        }
+
         const nextPreferences = {
           ...preferences.getAll(),
           ...change
@@ -655,6 +661,39 @@ class App {
     this._createSettingWindow(category)
   }
 
+  private _getEditorBrowserWindows(): BrowserWindow[] {
+    return this._windowManager
+      .getWindowsByType(WindowType.EDITOR)
+      .map(({ win }) => win.browserWindow)
+      .filter((win): win is BrowserWindow => win != null)
+  }
+
+  private _broadcastKeybindings(editorWindows: BrowserWindow[]): void {
+    const keybindingMap = Object.fromEntries(this._accessor.keybindings.keys)
+    for (const win of editorWindows) {
+      win.webContents.send('mt::keybindings-response', keybindingMap)
+    }
+  }
+
+  private _getKeybindingPreferences(): KeybindingPreferences {
+    const { keybindings } = this._accessor
+    return {
+      defaultKeybindings: keybindings.getDefaultKeybindings(),
+      userKeybindings: keybindings.getUserKeybindings(),
+      shortcutStyle: keybindings.getShortcutStyle()
+    }
+  }
+
+  private _applyShortcutStyle(style: unknown): void {
+    const { keybindings, menu } = this._accessor
+    const editorWindows = this._getEditorBrowserWindows()
+    const changed = keybindings.setShortcutStyle(style, editorWindows)
+    if (!changed) return
+
+    menu.updateKeybindings()
+    this._broadcastKeybindings(editorWindows)
+  }
+
   private _listenForIpcMain(): void {
     registerKeyboardListeners()
     registerSpellcheckerListeners()
@@ -821,25 +860,27 @@ class App {
     })
 
     ipcMain.handle('mt::keybinding-get-pref-keybindings', () => {
-      const { keybindings } = this._accessor
-      const defaultKeybindings = keybindings.getDefaultKeybindings()
-      const userKeybindings = keybindings.getUserKeybindings()
-      return { defaultKeybindings, userKeybindings }
+      return this._getKeybindingPreferences()
+    })
+
+    ipcMain.handle('mt::keybinding-set-style', (_event, style: unknown) => {
+      const { preferences } = this._accessor
+      const normalizedStyle = normalizeShortcutStyle(style)
+      preferences.setItem('shortcutStyle', normalizedStyle)
+      // The preference broadcast normally applies the change through the
+      // listener in init(). Apply it here as well so the settings window gets
+      // a correct response even during early application startup.
+      this._applyShortcutStyle(normalizedStyle)
+      return this._getKeybindingPreferences()
     })
 
     ipcMain.handle('mt::keybinding-save-user-keybindings', async(_event, userKeybindings) => {
       const { keybindings, menu } = this._accessor
-      const editorWindows = this._windowManager
-        .getWindowsByType(WindowType.EDITOR)
-        .map(({ win }) => win.browserWindow)
-        .filter((win): win is BrowserWindow => win != null)
+      const editorWindows = this._getEditorBrowserWindows()
       const saved = await keybindings.setUserKeybindings(userKeybindings, editorWindows)
 
       menu.updateKeybindings()
-      const keybindingMap = Object.fromEntries(keybindings.keys)
-      for (const win of editorWindows) {
-        win.webContents.send('mt::keybindings-response', keybindingMap)
-      }
+      this._broadcastKeybindings(editorWindows)
 
       return saved
     })

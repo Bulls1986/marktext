@@ -36,7 +36,11 @@ class Accessor {
     this.commandManager = CommandManager
     this._loadCommands()
 
-    this.keybindings = new Keybindings(this.commandManager, appEnvironment)
+    this.keybindings = new Keybindings(
+      this.commandManager,
+      appEnvironment,
+      this.preferences.getItem('shortcutStyle')
+    )
     this.menu = new AppMenu(this.preferences, this.keybindings, userDataPath)
     this.windowManager = new WindowManager(this.menu, this.preferences, this.editorBufferStore)
   }

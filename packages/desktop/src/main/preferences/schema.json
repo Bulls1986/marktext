@@ -71,6 +71,11 @@
     "type": "string",
     "default": "en"
   },
+  "shortcutStyle": {
+    "description": "General--The shortcut style used for the built-in keyboard shortcuts.",
+    "enum": ["marktext", "typora"],
+    "default": "marktext"
+  },
   "editorFontFamily": {
     "description": "Editor--editor font family",
     "type": "string",

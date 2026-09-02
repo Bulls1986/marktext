@@ -38,7 +38,7 @@ type WinArg = Parameters<Keybindings['registerEditorKeyHandlers']>[0]
 
 const tmpDirs: string[] = []
 
-const makeKeybindings = () => {
+const makeKeybindings = (shortcutStyle: 'marktext' | 'typora' = 'marktext') => {
   const userDataPath = fs.mkdtempSync(path.join(os.tmpdir(), 'mt-keybindings-'))
   tmpDirs.push(userDataPath)
   const commandManager = {
@@ -49,7 +49,7 @@ const makeKeybindings = () => {
     paths: { userDataPath },
     isDevMode: false
   } as unknown as AppEnvironmentArg
-  return new Keybindings(commandManager, appEnvironment)
+  return new Keybindings(commandManager, appEnvironment, shortcutStyle)
 }
 
 afterEach(() => {
@@ -86,5 +86,27 @@ describe('Keybindings.setUserKeybindings live re-registration (#3681)', () => {
     await kb.setUserKeybindings(new Map([['file.save', 'CmdOrCtrl+Alt+Shift+S']]), [win])
 
     expect(register).not.toHaveBeenCalled()
+  })
+
+  it('switches presets live without changing custom keybindings', async() => {
+    const kb = makeKeybindings()
+    const win = { isDestroyed: () => false } as unknown as WinArg
+    const customAccelerator = 'Ctrl+Alt+Shift+K'
+
+    await kb.setUserKeybindings(new Map([['format.hyperlink', customAccelerator]]))
+    register.mockClear()
+    unregister.mockClear()
+
+    expect(kb.setShortcutStyle('typora', [win])).toBe(true)
+    expect(kb.getShortcutStyle()).toBe('typora')
+    expect(kb.getAccelerator('format.hyperlink')).toBe(customAccelerator)
+    expect(kb.getUserKeybindings().get('format.hyperlink')).toBe(customAccelerator)
+    expect(kb.getAccelerator('paragraph.heading-1')).toBe('Ctrl+1')
+    expect(unregister).toHaveBeenCalled()
+    expect(register).toHaveBeenCalledWith(win, customAccelerator, expect.any(Function))
+
+    expect(kb.setShortcutStyle('marktext', [win])).toBe(true)
+    expect(kb.getAccelerator('format.hyperlink')).toBe(customAccelerator)
+    expect(kb.getUserKeybindings().get('format.hyperlink')).toBe(customAccelerator)
   })
 })
