@@ -27,6 +27,7 @@ class DiagramPreview extends Parent {
     private _renderTimer: ReturnType<typeof setTimeout> | null = null;
     private _renderWaiters = new Map<number, () => void>();
     private _hasRenderedResult = false;
+    private _lastValidatedCode: string | null = null;
     private _disposed = false;
     private _disposeDiagram: (() => void) | null = null;
     private _clickSubscription: Subscription | null = null;
@@ -74,6 +75,26 @@ class DiagramPreview extends Parent {
      */
     showSource() {
         this._setPresentationMode('source');
+    }
+
+    /**
+     * Reveal a prepared diagram after its source editor loses focus. Rendering
+     * and presentation are deliberately separate: a debounce may validate and
+     * stage a result while the user is still thinking in the source, but it
+     * must not take the editor away from them.
+     */
+    showPreviewOnBlur(): Promise<void> {
+        if (this._disposed || this.parent?.active === true)
+            return Promise.resolve();
+
+        if (this._lastValidatedCode === this._code) {
+            if (this._hasRenderedResult)
+                this._setPresentationMode('preview');
+
+            return Promise.resolve();
+        }
+
+        return this._renderImmediately();
     }
 
     private _setPresentationMode(mode: DiagramPresentationMode) {
@@ -129,6 +150,7 @@ class DiagramPreview extends Parent {
 
         if (!code) {
             this._hasRenderedResult = false;
+            this._lastValidatedCode = code;
             this.domNode!.removeAttribute('data-diagram-error');
             this.domNode!.innerHTML = `<div class="${CLASS_NAMES.MU_EMPTY}">&lt; ${i18n.t(
                 'Empty Diagram',
@@ -175,8 +197,15 @@ class DiagramPreview extends Parent {
 
             this._disposeDiagram = result.dispose;
             this._hasRenderedResult = true;
+            this._lastValidatedCode = code;
             this.domNode!.removeAttribute('data-diagram-error');
-            this._setPresentationMode('preview');
+            // A successful background validation must not steal focus from a
+            // diagram source that is still being edited. The active block's
+            // blur transition will reveal this prepared result later.
+            if (this.parent?.active !== true)
+                this._setPresentationMode('preview');
+            else
+                this._setPresentationMode('source');
         }
         catch (error) {
             if (this._disposed || generation !== this._renderGeneration)
@@ -190,6 +219,7 @@ class DiagramPreview extends Parent {
             // previous SVG below the source, which makes the document appear
             // to contain two versions of the same diagram.
             this._hasRenderedResult = false;
+            this._lastValidatedCode = code;
             this._disposeDiagram?.();
             this._disposeDiagram = null;
             this.domNode!.setAttribute('data-diagram-error', detail);
@@ -204,20 +234,9 @@ class DiagramPreview extends Parent {
         }
     }
 
-    /** Schedule a debounced render for the latest source text. */
-    scheduleRender(code = this._code): Promise<void> {
-        if (this._disposed)
-            return Promise.resolve();
-
+    private _prepareRender(code: string): number {
         const generation = ++this._renderGeneration;
-        const sourceChanged = code !== this._code;
         this._code = code;
-
-        // A changed source is always shown while it is being edited. A
-        // same-source redraw (for example a theme refresh) keeps the current
-        // preview mode to avoid an unnecessary source/preview flash.
-        if (sourceChanged || !this._hasRenderedResult || this._presentationMode === 'error')
-            this.showSource();
 
         if (this._renderTimer !== null)
             clearTimeout(this._renderTimer);
@@ -225,6 +244,41 @@ class DiagramPreview extends Parent {
         this._disposeDiagram?.();
         this._disposeDiagram = null;
         this._cancelOlderRenderWaiters(generation);
+
+        return generation;
+    }
+
+    private _renderImmediately(): Promise<void> {
+        if (this._disposed)
+            return Promise.resolve();
+
+        const generation = this._prepareRender(this._code);
+
+        return new Promise((resolve) => {
+            this._renderWaiters.set(generation, resolve);
+            void this._render(this._code, generation)
+                .catch((error) => {
+                    debug.error(`render ${this._type} diagram crashed`, error);
+                })
+                .finally(() => {
+                    this._resolveRenderWaiter(generation);
+                });
+        });
+    }
+
+    /** Schedule a debounced background validation for the latest source. */
+    scheduleRender(code = this._code): Promise<void> {
+        if (this._disposed)
+            return Promise.resolve();
+
+        const sourceChanged = code !== this._code;
+        const generation = this._prepareRender(code);
+
+        // A changed source is always shown while it is being edited. A
+        // same-source redraw (for example a theme refresh) keeps the current
+        // preview mode to avoid an unnecessary source/preview flash.
+        if (sourceChanged || !this._hasRenderedResult || this._presentationMode === 'error')
+            this.showSource();
 
         return new Promise((resolve) => {
             this._renderWaiters.set(generation, resolve);

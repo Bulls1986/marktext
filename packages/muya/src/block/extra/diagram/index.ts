@@ -20,12 +20,19 @@ class DiagramBlock extends Parent {
     }
 
     override set active(value) {
+        const wasActive = super.active;
         super.active = value;
-        if (!value)
-            return;
 
-        const preview = this.attachments.head as (Parent & { showSource?: () => void }) | null;
-        preview?.showSource?.();
+        const preview = this.attachments.head as (Parent & {
+            showSource?: () => void;
+            showPreviewOnBlur?: () => Promise<void>;
+        }) | null;
+        if (value) {
+            preview?.showSource?.();
+        }
+        else if (wasActive) {
+            void preview?.showPreviewOnBlur?.();
+        }
     }
 
     static create(muya: Muya, state: IDiagramState) {
