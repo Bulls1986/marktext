@@ -3,6 +3,7 @@ import Prism from 'prismjs'
 import katex from 'katex'
 import 'katex/dist/contrib/mhchem.min.js'
 import loadRenderer from '../renderers'
+import { renderMermaid as renderMermaidSvg } from '../renderers/mermaid.js'
 import githubMarkdownCss from 'github-markdown-css/github-markdown.css?inline'
 import exportStyle from '../assets/styles/exportStyle.css?inline'
 import highlightCss from 'prismjs/themes/prism.css?inline'
@@ -29,29 +30,24 @@ class ExportHtml {
 
   async renderMermaid() {
     const codes = this.exportContainer.querySelectorAll('code.language-mermaid')
+    const diagrams = []
     for (const code of codes) {
       const preEle = code.parentNode
       const mermaidContainer = document.createElement('div')
-      mermaidContainer.innerHTML = sanitize(
-        unescapeHTML(code.innerHTML),
-        EXPORT_DOMPURIFY_CONFIG,
-        true
-      )
       mermaidContainer.classList.add('mermaid')
       preEle.replaceWith(mermaidContainer)
+      diagrams.push({ node: mermaidContainer, source: code.textContent || '' })
     }
-    const mermaid = await loadRenderer('mermaid')
-    // We only export light theme, so set mermaid theme to `default`, in the future, we can choose whick theme to export.
-    mermaid.initialize({
-      securityLevel: 'strict',
-      theme: 'default'
-    })
-    mermaid.init(undefined, this.exportContainer.querySelectorAll('div.mermaid'))
-    if (this.muya) {
-      mermaid.initialize({
-        securityLevel: 'strict',
-        theme: this.muya.options.mermaidTheme
-      })
+    for (const { node, source } of diagrams) {
+      try {
+        const { svg, bindFunctions } = await renderMermaidSvg(source, 'default')
+        node.innerHTML = svg
+        if (bindFunctions) {
+          bindFunctions(node)
+        }
+      } catch (err) {
+        node.innerHTML = '< Invalid Diagram >'
+      }
     }
   }
 

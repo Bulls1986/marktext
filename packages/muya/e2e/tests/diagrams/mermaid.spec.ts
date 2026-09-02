@@ -6,16 +6,21 @@ import { editor, floats, quickInsertItem } from '../helpers/selectors';
 /**
  * Mermaid diagram rendering. Unlike PlantUML (which round-trips through the
  * public plantuml.com service), mermaid renders entirely client-side: the
- * diagram preview block (packages/core/src/block/extra/diagram/
- * diagramPreview.ts) lazy-imports `mermaid`, calls `mermaid.parse(code)` to
- * validate, then `mermaid.run({ nodes: [target] })` to mount an `<svg>`.
+ * diagram preview block (packages/muya/src/block/extra/diagram/
+ * diagramPreview.ts) lazy-imports `mermaid` and uses the direct
+ * `mermaid.render(id, source)` API to mount the returned `<svg>`.
  *
- * No network mock is needed. The render is async (dynamic import + parse +
- * run), so every assertion waits on an explicit DOM condition rather than a
- * fixed sleep.
+ * No network mock is needed. The render is async (dynamic import + direct
+ * Mermaid render), so every assertion waits on an explicit DOM condition
+ * rather than a fixed sleep.
  */
 
 const VALID_MERMAID = 'graph TD\n    A-->B';
+const ICON_MERMAID = [
+    'flowchart TD',
+    '    User@{ icon: "fa:user", form: "circle", label: "User" } --> Node@{ icon: "logos:nodejs", form: "square", label: "Node" }',
+].join('\n');
+const HTML_LABEL_MERMAID = 'flowchart TD\n    A["<b>Raw & text</b>"] --> B';
 
 // A truncated edge (`A--->` with no target) is rejected by `mermaid.parse`,
 // which the preview block catches and surfaces as an error node instead of
@@ -32,7 +37,7 @@ test.describe('mermaid diagram', () => {
             }] as TState[]);
         }, VALID_MERMAID);
 
-        // Mermaid is async (dynamic import + parse + run); allow generous time.
+        // Mermaid is async (dynamic import + direct render); allow generous time.
         const svg = page.locator(`${editor.diagramPreview} svg`).first();
         await expect(svg).toBeVisible({ timeout: 15_000 });
 
@@ -120,6 +125,45 @@ test.describe('mermaid diagram', () => {
         expect(md).toContain('```mermaid');
         expect(md).toContain('graph TD');
     });
+
+    test('renders icon shapes from the bundled Mermaid icon packs', async ({ page }) => {
+        await page.evaluate((text) => {
+            window.muya!.setContent([{
+                name: 'diagram',
+                text,
+                meta: { lang: 'yaml', type: 'mermaid' },
+            }] as TState[]);
+        }, ICON_MERMAID);
+
+        const svg = page.locator(`${editor.diagramPreview} > svg`).first();
+        await expect(svg).toBeVisible({ timeout: 15_000 });
+        await expect.poll(async () => svg.locator('svg.label-icon').count())
+            .toBeGreaterThan(0);
+        await expect(page.locator(`${editor.diagramPreview} ${editor.diagramError}`))
+            .toHaveCount(0);
+    });
+
+    test('keeps Mermaid source characters intact and isolates IDs between diagrams', async ({ page }) => {
+        await page.evaluate((texts) => {
+            window.muya!.setContent(texts.map((text) => ({
+                name: 'diagram',
+                text,
+                meta: { lang: 'yaml', type: 'mermaid' },
+            })) as TState[]);
+        }, [HTML_LABEL_MERMAID, VALID_MERMAID]);
+
+        await expect(page.locator(`${editor.diagramPreview} > svg`))
+            .toHaveCount(2, { timeout: 15_000 });
+
+        const rootIds = await page.evaluate(() => Array.from(
+            document.querySelectorAll('.mu-diagram-preview > svg'),
+            (svg) => svg.id,
+        ));
+        expect(rootIds).toHaveLength(2);
+        expect(new Set(rootIds).size).toBe(2);
+        await expect(page.locator(`${editor.diagramPreview} ${editor.diagramError}`))
+            .toHaveCount(0);
+    });
 });
 
 /**
@@ -177,7 +221,7 @@ test.describe('diagram via quick-insert menu', () => {
         await slowType(page, MERMAID_BODY);
 
         // The preview updates live on input; allow generous time for the async
-        // mermaid render (dynamic import + parse + run).
+        // mermaid render (dynamic import + direct render).
         const svg = page.locator(`${editor.diagramPreview} svg`).first();
         await expect(svg).toBeVisible({ timeout: 15_000 });
 

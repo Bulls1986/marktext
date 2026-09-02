@@ -4,6 +4,7 @@ import { fromEvent } from 'rxjs';
 import { CLASS_NAMES, PREVIEW_DOMPURIFY_CONFIG } from '../../../config';
 import { sanitize } from '../../../utils';
 import loadRenderer from '../../../utils/diagram';
+import { renderMermaid } from '../../../utils/diagram/mermaid';
 import logger from '../../../utils/logger';
 import Parent from '../../base/parent';
 
@@ -65,6 +66,10 @@ async function renderDiagram({
     plantumlServer,
     sequenceTheme,
 }: IRenderOptions) {
+    if (type === 'mermaid') {
+        return renderMermaid(code, mermaidTheme);
+    }
+
     const render = await loadRenderer(type);
     const options = {};
     if (type === 'vega-lite') {
@@ -98,24 +103,12 @@ async function renderDiagram({
         // dimensions (once the async draw completes) so it scales to fit.
         ensureViewBox(target);
     }
-    else if (type === 'mermaid') {
-        render.initialize({
-            startOnLoad: false,
-            securityLevel: 'strict',
-            theme: mermaidTheme,
-        });
-        await render.parse(code);
-        target.innerHTML = sanitize(code, PREVIEW_DOMPURIFY_CONFIG, true) as string;
-        target.removeAttribute('data-processed');
-        await render.run({
-            nodes: [target],
-        });
-    }
 }
 
 class DiagramPreview extends Parent {
     private _code: string;
     private _type: string;
+    private _updateVersion = 0;
     static override blockName = 'diagram-preview';
 
     static create(muya: Muya, state: IDiagramState) {
@@ -167,6 +160,7 @@ class DiagramPreview extends Parent {
 
     async update(code = this._code) {
         const { i18n } = this.muya;
+        const updateVersion = ++this._updateVersion;
         if (this._code !== code)
             this._code = code;
 
@@ -176,7 +170,7 @@ class DiagramPreview extends Parent {
             const { _type: type } = this;
 
             try {
-                await renderDiagram({
+                const mermaidResult = await renderDiagram({
                     target: this.domNode!,
                     code,
                     type,
@@ -185,8 +179,22 @@ class DiagramPreview extends Parent {
                     plantumlServer,
                     sequenceTheme,
                 });
+
+                if (type === 'mermaid') {
+                    if (updateVersion !== this._updateVersion)
+                        return;
+
+                    const { svg, bindFunctions } = mermaidResult as Awaited<
+                        ReturnType<typeof renderMermaid>
+                    >;
+                    this.domNode!.innerHTML = svg;
+                    bindFunctions?.(this.domNode!);
+                }
             }
             catch (error) {
+                if (updateVersion !== this._updateVersion)
+                    return;
+
                 const detail
                     = error instanceof Error ? error.message : String(error);
                 debug.error(`render ${type} diagram failed: ${detail}`);
