@@ -107,7 +107,10 @@ export const useProjectStore = defineStore('project', () => {
     projectTree.value = tree
 
     const layout = {
-      rightColumn: 'files',
+      // Keep the current panel when a project is opened. On first launch the
+      // layout store starts with the default TOC, so opening the project must
+      // not immediately replace it with the files panel.
+      rightColumn: layoutStore.rightColumn,
       showSideBar: true,
       showTabBar: true
     }

@@ -49,6 +49,13 @@ class Preference extends TypedEmitter<PreferenceEvents> {
           if (store.get('startUpAction') === 'lastState') {
             store.set('startUpAction', 'openLastFolder')
           }
+        },
+        // The private build enables the sidebar and tab bar by default. Apply
+        // this once for existing installations that still have the upstream
+        // false values; subsequent user toggles remain unchanged.
+        '0.20.0-dev.6': (store) => {
+          store.set('sideBarVisibility', true)
+          store.set('tabBarVisibility', true)
         }
       },
       beforeEachMigration: (_store, context) => {

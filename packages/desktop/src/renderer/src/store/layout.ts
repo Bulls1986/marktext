@@ -11,6 +11,8 @@ interface LayoutPartial {
   sideBarWidth?: number | string
 }
 
+export const DEFAULT_RIGHT_COLUMN = 'toc'
+
 interface SetLayoutOptions {
   scheduleBufferUpdate?: boolean
 }
@@ -46,7 +48,7 @@ const initialWidth = localStorage.getItem('side-bar-width')
 const initialSideBarWidth = normalizeSideBarWidth(initialWidth)
 
 export const useLayoutStore = defineStore('layout', () => {
-  const rightColumn = ref<string>('files')
+  const rightColumn = ref<string>(DEFAULT_RIGHT_COLUMN)
   const showSideBar = ref(false)
   const showTabBar = ref(false)
   const sideBarWidth = ref<number>(initialSideBarWidth)

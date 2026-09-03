@@ -12,7 +12,7 @@ vi.hoisted(() => {
 })
 
 import { useListenForMainStore } from '@/store/listenForMain'
-import { useLayoutStore } from '@/store/layout'
+import { DEFAULT_RIGHT_COLUMN, useLayoutStore } from '@/store/layout'
 
 // `EDITOR_EDIT_ACTION('findInFolder')` routes through `layoutStore.SET_LAYOUT`,
 // which (because `showSideBar` is defined) reads `window.marktext.env`,
@@ -46,7 +46,7 @@ describe('listenForMain store EDITOR_EDIT_ACTION', () => {
 
   it("opens the search side panel for 'findInFolder'", () => {
     const layoutStore = useLayoutStore()
-    expect(layoutStore.rightColumn).toBe('files')
+    expect(layoutStore.rightColumn).toBe(DEFAULT_RIGHT_COLUMN)
     expect(layoutStore.showSideBar).toBe(false)
 
     useListenForMainStore().EDITOR_EDIT_ACTION('findInFolder')

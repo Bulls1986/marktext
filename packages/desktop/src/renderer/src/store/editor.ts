@@ -18,7 +18,7 @@ import {
 import { defineStore } from 'pinia'
 import { usePreferencesStore } from './preferences'
 import { useProjectStore } from './project'
-import { useLayoutStore } from './layout'
+import { DEFAULT_RIGHT_COLUMN, useLayoutStore } from './layout'
 import { useMainStore } from '.'
 import { t } from '../i18n'
 import { debouncedSendBufferedState, sendBufferedState } from './bufferedState'
@@ -901,7 +901,7 @@ export const useEditorStore = defineStore('editor', {
         mainStore.SET_INITIALIZED()
         preferencesStore.SET_USER_PREFERENCE({ endOfLine: lineEnding })
         layoutStore.SET_LAYOUT({
-          rightColumn: 'files',
+          rightColumn: DEFAULT_RIGHT_COLUMN,
           showSideBar: !!sideBarVisibility,
           showTabBar: !!tabBarVisibility
         })
