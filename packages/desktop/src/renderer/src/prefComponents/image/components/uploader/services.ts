@@ -9,7 +9,7 @@ export interface UploaderService {
   agreedToLegalNotices: boolean
 }
 
-export type UploaderServiceId = 'picgo' | 'cliScript'
+export type UploaderServiceId = 'picgo' | 'picgoApp' | 'cliScript'
 
 export const isValidService = (name: string): boolean => {
   return Object.prototype.hasOwnProperty.call(getServices(), name)
@@ -21,6 +21,14 @@ const getServices = (): Record<UploaderServiceId, UploaderService> => ({
     isGdprCompliant: false,
     privacyUrl: '',
     tosUrl: 'https://github.com/PicGo/PicGo-Core',
+    agreedToLegalNotices: true
+  },
+
+  picgoApp: {
+    name: 'PicGo (App)',
+    isGdprCompliant: false,
+    privacyUrl: '',
+    tosUrl: 'https://github.com/Molunerfinn/PicGo',
     agreedToLegalNotices: true
   },
 

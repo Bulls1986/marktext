@@ -158,6 +158,8 @@ declare global {
 
   interface UploaderAPI {
     uploadImage(req: unknown): Promise<unknown>
+    testPicgoApp(picgoAppPath: string): Promise<string>
+    pickPicgoAppPath(): Promise<string>
   }
 
   interface FontsAPI {

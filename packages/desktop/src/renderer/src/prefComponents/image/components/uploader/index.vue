@@ -17,6 +17,41 @@
         :on-change="(value) => setCurrentUploader(value)"
       />
       <div
+        v-if="currentUploader === 'picgoApp'"
+        class="picgo-app"
+      >
+        <div class="form-group">
+          <div class="label">
+            PicGo Path:
+          </div>
+          <div class="picgo-app-path">
+            <el-input
+              v-model="picgoAppPath"
+              size="mini"
+              @change="savePicgoAppPath"
+              @blur="savePicgoAppPath"
+            />
+            <el-button
+              class="picgo-app-browse"
+              size="mini"
+              @click="choosePicgoAppPath"
+            >
+              ...
+            </el-button>
+          </div>
+        </div>
+        <div class="form-group">
+          <el-button
+            size="mini"
+            :loading="isTestingPicgoApp"
+            :disabled="!picgoAppPath"
+            @click="testPicgoApp"
+          >
+            Test Uploader
+          </el-button>
+        </div>
+      </div>
+      <div
         v-if="currentUploader === 'picgo'"
         class="picgo"
       >
@@ -282,6 +317,8 @@ const uploaderOptions: PrefSelectOption<string>[] = Object.keys(getServices()).m
   }
 })
 const cliScript = ref<string>('')
+const picgoAppPath = ref<string>('')
+const isTestingPicgoApp = ref<boolean>(false)
 const picgoExists = ref<boolean>(false)
 const picgoDetectionFailed = ref<boolean>(false) // Whether detection failed
 const picgoDetectionStatus = ref<string>('') // Detection status text
@@ -305,8 +342,25 @@ const showStandaloneRefreshButton = ref<boolean>(true) // Whether to show the st
 // computed
 const {
   currentUploader,
-  cliScript: prefCliScript
+  cliScript: prefCliScript,
+  picgoAppPath: prefPicgoAppPath
 } = storeToRefs(preferenceStore)
+
+const getDefaultPicgoAppPath = (): string => {
+  const platform = window.electron.process.platform
+  if (platform === 'win32') return String.raw`C:\Program Files\PicGo\PicGo.exe`
+  if (platform === 'darwin') return '/Applications/PicGo.app/Contents/MacOS/PicGo'
+  return ''
+}
+
+const ensurePicgoAppPath = (): void => {
+  const configuredPath = prefPicgoAppPath.value || getDefaultPicgoAppPath()
+  picgoAppPath.value = configuredPath
+}
+
+watch(prefPicgoAppPath, (value) => {
+  if (value) picgoAppPath.value = value
+})
 
 // `isFileExecutable` is async via IPC; track the result in a ref so the
 // disabled state still updates reactively.
@@ -484,6 +538,7 @@ const handleComponentDeactivated = () => {
 onMounted(() => {
   nextTick(() => {
     cliScript.value = prefCliScript.value
+    ensurePicgoAppPath()
 
     // Core detection startup logic — ensure it starts on onMounted
     if (currentUploader.value === 'picgo') {
@@ -576,7 +631,49 @@ const save = (): void => {
   })
 }
 
+const savePicgoAppPath = (): void => {
+  const value = picgoAppPath.value.trim()
+  picgoAppPath.value = value
+  prefPicgoAppPath.value = value
+  preferenceStore.SET_USER_DATA({
+    type: 'picgoAppPath',
+    value
+  })
+}
+
+const choosePicgoAppPath = async(): Promise<void> => {
+  const selectedPath = await window.uploader.pickPicgoAppPath()
+  if (!selectedPath) return
+  picgoAppPath.value = selectedPath
+  savePicgoAppPath()
+}
+
+const testPicgoApp = async(): Promise<void> => {
+  if (isTestingPicgoApp.value) return
+  if (!picgoAppPath.value) ensurePicgoAppPath()
+  savePicgoAppPath()
+  isTestingPicgoApp.value = true
+
+  try {
+    const url = await window.uploader.testPicgoApp(picgoAppPath.value)
+    notice.notify({
+      title: 'Test Uploader',
+      message: url,
+      type: 'primary'
+    })
+  } catch (error) {
+    notice.notify({
+      title: 'Test Uploader',
+      message: error instanceof Error ? error.message : String(error),
+      type: 'warning'
+    })
+  } finally {
+    isTestingPicgoApp.value = false
+  }
+}
+
 const setCurrentUploader = (value: string | number | boolean): void => {
+  if (value === 'picgoApp') ensurePicgoAppPath()
   const type = 'currentUploader'
   preferenceStore.SET_USER_DATA({ type, value })
 }
@@ -1175,6 +1272,21 @@ const testPicgo = async (): Promise<void> => {
 
 .pref-image-uploader .form-group {
   margin: 20px 0 0 0;
+}
+
+.pref-image-uploader .picgo-app-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pref-image-uploader .picgo-app-path .el-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.pref-image-uploader .picgo-app-browse {
+  flex: 0 0 auto;
 }
 
 .pref-image-uploader .label {

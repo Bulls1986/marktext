@@ -854,6 +854,19 @@ interface ImagePathSuggestion {
   [key: string]: unknown
 }
 
+// muyajs exposes in-memory clipboard images as data URLs. PicGo App accepts a
+// local file path, so turn that data URL back into a File before handing it to
+// the uploader. Clipboard file paths continue to use the existing path flow.
+const dataUrlToFile = async (dataUrl: string): Promise<File> => {
+  const response = await fetch(dataUrl)
+  if (!response.ok) throw new Error(`Cannot read pasted image (${response.status}).`)
+
+  const blob = await response.blob()
+  const type = blob.type || dataUrl.match(/^data:([^;,]+)/i)?.[1] || 'image/png'
+  const extension = type.split('/')[1]?.split(/[+;]/)[0] || 'png'
+  return new File([blob], `pasted-image.${extension}`, { type })
+}
+
 const imagePathAutoComplete = async (src: string) => {
   const files = (await editorStore.ASK_FOR_IMAGE_AUTO_PATH(src)) as unknown as ImagePathSuggestion[]
   return files.map((f) => {
@@ -900,11 +913,15 @@ const imageAction = async (
   let destImagePath = ''
   switch (imageInsertAction.value) {
     case 'upload': {
+      let uploadSource: string | File = image
       try {
+        if (typeof image === 'string' && /^data:image\//i.test(image)) {
+          uploadSource = await dataUrlToFile(image)
+        }
         // Pass the full preferences state object to avoid dereferencing non-existent .value
         destImagePath = (await uploadImage(
           currentPathname,
-          image,
+          uploadSource,
           preferencesStore.$state as unknown as import('@/util/fileSystem').UploadImagePreferences
         )) as string
       } catch (err) {
@@ -915,7 +932,7 @@ const imageAction = async (
         })
         destImagePath = (await moveImageToFolder(
           currentPathname,
-          image,
+          uploadSource,
           resolvedGlobalImageFolderPath
         )) as string
       }

@@ -1,10 +1,12 @@
 import path from 'path'
 import { tmpdir } from 'os'
+import { randomUUID } from 'crypto'
 import { exec, execFile } from 'child_process'
 import fs from 'fs-extra'
-import { ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
 import commandExists from 'command-exists'
 import { isImageFile } from 'common/filesystem/paths'
+import { uploadByPicgoApp } from './picgoApp'
 
 const buildPreferredPathEnv = (): string => {
   const extras =
@@ -122,17 +124,24 @@ const writeBinaryToTmp = async(
   suffix: string = ''
 ): Promise<string> => {
   const buf = data instanceof Uint8Array ? Buffer.from(data) : Buffer.from(data || [])
-  const tmpPath = path.join(tmpdir(), `${Date.now()}${suffix}`)
+  const tmpPath = path.join(tmpdir(), `${Date.now()}-${randomUUID()}${suffix}`)
   await fs.writeFile(tmpPath, buf)
   return tmpPath
 }
 
+interface UploaderOptions {
+  currentUploader: string
+  cliScript: string
+  picgoAppPath?: string
+}
+
 const uploadFromPath = async(
   imagePath: string,
-  options: { currentUploader: string; cliScript: string }
+  options: UploaderOptions
 ): Promise<string> => {
-  const { currentUploader, cliScript } = options
+  const { currentUploader, cliScript, picgoAppPath } = options
   if (currentUploader === 'picgo') return uploadByPicgo(imagePath)
+  if (currentUploader === 'picgoApp') return uploadByPicgoApp(imagePath, picgoAppPath)
   if (currentUploader === 'cliScript') return uploadByCli(cliScript, imagePath)
   throw new Error(`Unsupported uploader: ${currentUploader}`)
 }
@@ -144,12 +153,8 @@ interface BufferImagePayload {
 
 const uploadFromBuffer = async(
   { data, name }: BufferImagePayload,
-  options: {
-    currentUploader: string
-    cliScript: string
-  }
+  options: UploaderOptions
 ): Promise<string> => {
-  const { currentUploader, cliScript } = options
   const suffix = path.extname(name || '') || ''
   const localPath = await writeBinaryToTmp(data, suffix)
   const cleanup = () =>
@@ -157,9 +162,7 @@ const uploadFromBuffer = async(
       /* ignore */
     })
   try {
-    if (currentUploader === 'picgo') return await uploadByPicgo(localPath)
-    if (currentUploader === 'cliScript') return await uploadByCli(cliScript, localPath)
-    throw new Error(`Unsupported uploader: ${currentUploader}`)
+    return await uploadFromPath(localPath, options)
   } finally {
     await cleanup()
   }
@@ -169,8 +172,13 @@ interface UploadRequest {
   pathname: string
   image: string | BufferImagePayload
   isPath: boolean
-  preferences: { currentUploader: string; cliScript: string }
+  preferences: UploaderOptions
 }
+
+const PICGO_TEST_IMAGE = Uint8Array.from(Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64'
+))
 
 export const registerUploaderHandlers = (): void => {
   ipcMain.handle('mt::uploader::upload', async(_event, req: UploadRequest) => {
@@ -183,5 +191,30 @@ export const registerUploaderHandlers = (): void => {
       return uploadFromPath(imagePath, preferences)
     }
     return uploadFromBuffer(image as BufferImagePayload, preferences)
+  })
+
+  ipcMain.handle('mt::uploader::test-picgo-app', async(_event, picgoAppPath: string) => {
+    return uploadFromBuffer(
+      { data: PICGO_TEST_IMAGE, name: 'marktext-picgo-test.png' },
+      { currentUploader: 'picgoApp', cliScript: '', picgoAppPath }
+    )
+  })
+
+  ipcMain.handle('mt::uploader::pick-picgo-app', async(event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return ''
+
+    const isMac = process.platform === 'darwin'
+    const { filePaths } = await dialog.showOpenDialog(win, {
+      properties: isMac ? ['openFile', 'openDirectory'] : ['openFile'],
+      ...(process.platform === 'win32'
+        ? { filters: [{ name: 'PicGo', extensions: ['exe'] }] }
+        : {})
+    })
+    const selectedPath = filePaths?.[0] || ''
+    if (isMac && selectedPath.toLowerCase().endsWith('.app')) {
+      return path.join(selectedPath, 'Contents', 'MacOS', 'PicGo')
+    }
+    return selectedPath
   })
 }

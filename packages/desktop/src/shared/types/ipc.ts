@@ -85,6 +85,8 @@ export interface IpcInvokeChannels {
   'mt::spellchecker-remove-word': { args: [word: string]; ret: boolean }
   'mt::spellchecker-set-enabled': { args: [enabled: boolean]; ret: void }
   'mt::spellchecker-switch-language': { args: [language: string]; ret: void }
+  'mt::uploader::pick-picgo-app': { args: []; ret: string }
+  'mt::uploader::test-picgo-app': { args: [picgoAppPath: string]; ret: string }
   'mt::uploader::upload': { args: [req: unknown]; ret: unknown }
   'mt::win::is-fullscreen': { args: []; ret: boolean }
   'mt::win::is-maximized': { args: []; ret: boolean }

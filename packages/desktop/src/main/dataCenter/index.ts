@@ -8,6 +8,7 @@ import log from 'electron-log'
 import { ensureDirSync } from 'common/filesystem'
 import { IMAGE_EXTENSIONS } from 'common/filesystem/paths'
 import { TypedEmitter } from '@shared/types/typedEmitter'
+import { getDefaultPicgoAppPath } from '../ipc/picgoApp'
 
 const DATA_CENTER_NAME = 'dataCenter'
 
@@ -53,7 +54,8 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       screenshotFolderPath: path.join(this.userDataPath, 'screenshot'),
       webImages: [],
       cloudImages: [],
-      currentUploader: 'picgo'
+      currentUploader: 'picgo',
+      picgoAppPath: getDefaultPicgoAppPath()
     }
 
     if (!this.hasDataCenterFile) {
@@ -64,6 +66,12 @@ class DataCenter extends TypedEmitter<DataCenterEvents> {
       const stored = this.store.get('currentUploader') as string | undefined
       if (stored === 'none' || stored === 'github') {
         this.store.set('currentUploader', 'picgo')
+      }
+
+      // Keep existing data-center files compatible with the PicGo App
+      // uploader introduced after the original uploader settings.
+      if (typeof this.store.get('picgoAppPath') !== 'string') {
+        this.store.set('picgoAppPath', getDefaultPicgoAppPath())
       }
     }
     this._listenForIpcMain()

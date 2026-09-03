@@ -18,5 +18,9 @@
   "currentUploader": {
     "description": "The current image uploader",
     "type": "string"
+  },
+  "picgoAppPath": {
+    "description": "The PicGo App executable path.",
+    "type": "string"
   }
 }

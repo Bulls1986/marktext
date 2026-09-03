@@ -108,6 +108,7 @@ export const moveImageToFolder = async(
 export interface UploadImagePreferences {
   currentUploader: string
   cliScript?: string
+  picgoAppPath?: string
 }
 
 export const uploadImage = async(
@@ -117,9 +118,16 @@ export const uploadImage = async(
 ): Promise<unknown> => {
   // Pass only a plain serializable object — the full Pinia $state is a Vue
   // Proxy which Electron's structured-clone algorithm cannot serialize.
-  const ipcPrefs = {
+  const ipcPrefs: {
+    currentUploader: string
+    cliScript: string
+    picgoAppPath?: string
+  } = {
     currentUploader: preferences.currentUploader,
     cliScript: preferences.cliScript ?? ''
+  }
+  if (preferences.currentUploader === 'picgoApp') {
+    ipcPrefs.picgoAppPath = preferences.picgoAppPath ?? ''
   }
   const isPath = typeof image === 'string'
   if (isPath) {

@@ -3,7 +3,7 @@ import { uploadImage } from '@/util/fileSystem'
 
 // uploadImage forwards to the preload contextBridge surface
 // (window.uploader.uploadImage). It must hand the IPC layer only a plain
-// serializable {currentUploader,cliScript} object — the full Pinia $state is a
+// serializable uploader preference object — the full Pinia $state is a
 // Vue Proxy that Electron's structured-clone cannot serialize.
 const uploadImageFn = vi.fn((_payload?: unknown) => Promise.resolve('https://cdn/x.png'))
 
@@ -54,12 +54,13 @@ describe('uploadImage IPC payload shape', () => {
     expect(payload.preferences).toEqual({ currentUploader: 'picgo', cliScript: '' })
   })
 
-  it('drops extra prefs keys, keeping only currentUploader and cliScript', async() => {
-    // Simulates being handed the full preferences $state — only the two
-    // whitelisted keys may cross the IPC boundary (structured-clone safety).
+  it('drops extra prefs keys, keeping only uploader prefs', async() => {
+    // Simulates being handed the full preferences $state — only the
+    // whitelisted uploader keys may cross the IPC boundary (structured-clone safety).
     const fatPrefs = {
       currentUploader: 'picgo',
       cliScript: '/usr/local/bin/upload.sh',
+      picgoAppPath: '/Applications/PicGo.app/Contents/MacOS/PicGo',
       imageInsertAction: 'folder',
       autoGuessEncoding: true,
       nested: { foo: 'bar' }
@@ -80,6 +81,21 @@ describe('uploadImage IPC payload shape', () => {
 
     const payload = uploadImageFn.mock.calls[0][0] as { preferences: Record<string, unknown> }
     expect(payload.preferences).toEqual({ currentUploader: 'picgo', cliScript: '' })
+  })
+
+  it('forwards the PicGo App path only for the PicGo App uploader', async() => {
+    const picgoAppPath = '/Applications/PicGo.app/Contents/MacOS/PicGo'
+    await uploadImage(docPath, '/x/y.png', {
+      currentUploader: 'picgoApp',
+      picgoAppPath
+    })
+
+    const payload = uploadImageFn.mock.calls[0][0] as { preferences: Record<string, unknown> }
+    expect(payload.preferences).toEqual({
+      currentUploader: 'picgoApp',
+      cliScript: '',
+      picgoAppPath
+    })
   })
 
   it('returns the uploader-provided URL', async() => {

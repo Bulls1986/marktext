@@ -219,7 +219,9 @@ const ripgrepAPI = {
 }
 
 const uploaderAPI = {
-  uploadImage: (req: unknown) => invoke('mt::uploader::upload', req)
+  uploadImage: (req: unknown) => invoke('mt::uploader::upload', req),
+  testPicgoApp: (picgoAppPath: string) => invoke('mt::uploader::test-picgo-app', picgoAppPath),
+  pickPicgoAppPath: () => invoke('mt::uploader::pick-picgo-app')
 }
 
 const fontsAPI = {

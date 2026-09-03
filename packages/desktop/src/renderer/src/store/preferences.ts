@@ -122,6 +122,7 @@ export interface PreferencesState {
   cloudImages: unknown[]
   currentUploader: string
   cliScript: string
+  picgoAppPath: string
 }
 
 interface SingleSetPreferencePayload {
@@ -237,7 +238,8 @@ export const usePreferencesStore = defineStore('preferences', {
     webImages: [],
     cloudImages: [],
     currentUploader: 'picgo',
-    cliScript: ''
+    cliScript: '',
+    picgoAppPath: ''
   }),
 
   getters: {
