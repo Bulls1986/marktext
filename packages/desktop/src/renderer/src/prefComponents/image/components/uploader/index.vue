@@ -1285,16 +1285,26 @@ const testPicgo = async (): Promise<void> => {
   min-width: 0;
 }
 
+.pref-image-uploader .picgo-app-path :deep(.el-input__wrapper) {
+  background: var(--inputBgColor);
+  box-shadow: 0 0 0 1px var(--editorColor10) inset;
+}
+
+.pref-image-uploader .picgo-app-path :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px var(--themeColor) inset;
+}
+
+.pref-image-uploader .picgo-app-path :deep(.el-input__inner) {
+  background: transparent;
+  color: var(--editorColor80);
+}
+
 .pref-image-uploader .picgo-app-browse {
   flex: 0 0 auto;
 }
 
 .pref-image-uploader .label {
   margin-bottom: 10px;
-}
-
-.pref-image-uploader .el-input__inner {
-  background: transparent;
 }
 
 .pref-image-uploader .el-button.btn-reset,
