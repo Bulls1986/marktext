@@ -409,7 +409,11 @@ export class ImageEditTool extends BaseFloat {
 
         // Store local path mapping if available
         const { src: localPath } = getImageSrc(src);
-        if (localPath) {
+        // A pasted bitmap is already available as a data URL while the
+        // uploader is running. Do not cache that data URL against the returned
+        // remote address, otherwise the document points at PicGo's URL but the
+        // renderer continues displaying the old base64 payload.
+        if (localPath && !/^data:image\//i.test(src) && !URL_REG.test(src)) {
             this.muya.editor.inlineRenderer.renderer.urlMap.set(uploadedSrc, localPath);
         }
 
