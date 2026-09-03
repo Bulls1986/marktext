@@ -56,6 +56,11 @@ class Preference extends TypedEmitter<PreferenceEvents> {
         '0.20.0-dev.6': (store) => {
           store.set('sideBarVisibility', true)
           store.set('tabBarVisibility', true)
+        },
+        // Reapply the private build defaults for users upgrading from .6.
+        '0.20.0-dev.7': (store) => {
+          store.set('sideBarVisibility', true)
+          store.set('tabBarVisibility', true)
         }
       },
       beforeEachMigration: (_store, context) => {
